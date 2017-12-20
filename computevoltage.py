@@ -6,6 +6,8 @@ import linecache
 from scipy.fftpack import rfft, irfft, rfftfreq
 from scipy.interpolate import interp1d
 
+import modules 
+
 ##### antenna response file 
 fileleff='HorizonAntenna_leff_loaded.npy' # 'HorizonAntenna_leff_notloaded.npy' if loaded=0
 freq,realimp,reactance,theta,phi,lefftheta,leffphi,phasetheta,phasephi=np.load(fileleff) ### this line cost 6-7s
@@ -286,8 +288,17 @@ if __name__ == '__main__':
   # decide if the effectice zenith should be calculated (1) or not (0)
   effective = float(sys.argv[5])
   
+###### new parameters to be handed over --- see how to structure all the input parameters  
+  #primary="iron"
+  #injection_height=100000 #m ### take a long while until getting Xmax
+  #energy=1. # EeV
+  primary="pion"
+  injection_height=3000 #m
+  energy=1. # EeV
+  
+  
   ###Handing over one antenna or a whole array  
-  if len(sys.argv)==7: # just one specif antenna handed over
+  if len(sys.argv)==9: # just one specif antenna handed over
     start=int(sys.argv[6]) # antenna ID
     end=start+1
     print "single antenna with ID: ", str(start)," handed over"
@@ -298,6 +309,25 @@ if __name__ == '__main__':
     end=len(positions)
     print "Array with ", end, " antennas handed over"
   
+  if effective==1: # effective zenith caclculation needs Xmax position as input
+            print "effective zenith calculated - Xmax postion approximated ..."
+            # Then compute Xmax
+            #injection_height = 346 ## always refeering to sealevel
+            #hor_dist=8000. # approx. horizontal distance from injection point to xmax
+            #print 'Now computing Xmax position from injection height=',injection_height,'m, horizontal distance to Xmax= ',hor_dist,'m and (zen,azim) values.'
+            caz = np.cos(np.deg2rad(azimuth_sim))
+            saz = np.sin(np.deg2rad(azimuth_sim))
+            czen = np.cos(np.deg2rad(zenith_sim))
+            szen = np.sin(np.deg2rad(zenith_sim))
+            
+            
+            
+            Xmax_primary = modules._getXmax(primary, energy, np.deg2rad(zenith_sim))# approximation based on values from plots for gamma (=e) and protons (=pi) # g/cm2
+            #print("xmax value " , Xmax_primary)
+            Xmax_height, Xmax_distance = modules._dist_decay_Xmax(np.deg2rad(zenith_sim), injection_height, Xmax_primary)# 8000.# d_prime: distance from decay point to Xmax
+            hor_dist= Xmax_distance
+            Xmax = hor_dist/szen*np.array([caz*szen, saz*szen, czen])+np.array([0,0,injection_height])
+            print hor_dist, Xmax
   
   
  ###### loop  over l
@@ -339,15 +369,9 @@ if __name__ == '__main__':
                     except : 
                             print 'No antenna position file found, please put antpos.dat in', path, 'or enter antenna positions as arguments.'
                             sys.exit()
-            # Then compute Xmax
-            injection_height = 346 ## always refeering to sealevel
-            hor_dist=8000. # approx. horizontal distance from injection point to xmax
-            #print 'Now computing Xmax position from injection height=',injection_height,'m, horizontal distance to Xmax= ',hor_dist,'m and (zen,azim) values.'
-            caz = np.cos(np.deg2rad(azimuth_sim))
-            saz = np.sin(np.deg2rad(azimuth_sim))
-            czen = np.cos(np.deg2rad(zenith_sim))
-            szen = np.sin(np.deg2rad(zenith_sim))
-            Xmax = hor_dist/szen*np.array([caz*szen, saz*szen, czen])+np.array([0,0,injection_height])
+
+            
+            
             #print 'Xmax = ',Xmax
             # Finally compute effective zenith
             zenith_eff = effective_zenith(zenith_sim, azimuth_sim, alpha_sim, x_sim, y_sim, z_sim, Xmax[0], Xmax[1], Xmax[2])
