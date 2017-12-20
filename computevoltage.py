@@ -7,7 +7,7 @@ from scipy.fftpack import rfft, irfft, rfftfreq
 from scipy.interpolate import interp1d
 
 ##### antenna response file 
-fileleff='butwidebasedoublehflat_4p5mhalf_leff_loaded.npy' 
+fileleff='HorizonAntenna_leff_loaded.npy' # 'HorizonAntenna_leff_notloaded.npy' if loaded=0
 freq,realimp,reactance,theta,phi,lefftheta,leffphi,phasetheta,phasephi=np.load(fileleff) ### this line cost 6-7s
 
 
