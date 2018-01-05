@@ -1,0 +1,8 @@
+{
+    "irods_host" : "ccirods.in2p3.fr",
+    "irods_port" : 5546,
+    "irods_user_name" : "trirods",
+    "irods_home" : "/trend/home/trirods",
+    "irods_cwd" : "/trend/home/trirods",
+    "irods_zone_name" : "trend"
+}
