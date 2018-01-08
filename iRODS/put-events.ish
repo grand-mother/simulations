@@ -1,0 +1,17 @@
+#!/project/fh1-project-huepra/le6232/soft/ishell/bin/ishell
+# Example script for copying data from fh1 to iRODS. Note
+# that you need to set your iRODS environment first.
+#
+# -----------------------------------------
+# Scheduler options
+# -----------------------------------------
+#MSUB -N put-events
+#MSUB -q singlenode
+#MSUB -l nodes=1:ppn=1
+#MSUB -l walltime=24:00:00
+#MSUB -l pmem=3gb
+#MSUB -v PATH, PYTHONPATH
+# -----------------------------------------
+
+cd grand/sim/flat-100x100km2
+put -f data/E*
