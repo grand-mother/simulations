@@ -107,7 +107,7 @@ if len(sys.argv)<3: # grep all antennas from the antenna file
             t=text[:,0] # in s
             vx=text[:,1] #EW axis antenna
             vy=text[:,2] #NS axis antenna
-
+            vz=text[:,3] #vertical axis antenna
 
             tstep=t[5]-t[4]#1e-9, sec, time bins in simulations
             #print "antenna ", str(l)," time binning sims ", tstep, 'total trace length :', t[-1]-t[0], len(t)
@@ -116,6 +116,7 @@ if len(sys.argv)<3: # grep all antennas from the antenna file
             if DISPLAY==1:
                 plt.plot(t*1e9,vx) # s*1e9 = ns
                 plt.plot(t*1e9,vy)
+                plt.plot(t*1e9,vz)
                 plt.xlabel('Time [ns]')
                 plt.ylabel('Voltage [uV]')
                 plt.show()
@@ -123,9 +124,11 @@ if len(sys.argv)<3: # grep all antennas from the antenna file
             #Filtering in frequency band
             vx=Filtering(vx,tstep,FREQMIN,FREQMAX)
             vy=Filtering(vy,tstep,FREQMIN,FREQMAX)
+            vz=Filtering(vz,tstep,FREQMIN,FREQMAX)
             if DISPLAY==1:
                 plt.plot(t*1e9,vx)
                 plt.plot(t*1e9,vy)
+                plt.plot(t*1e9,vz)
                 plt.xlabel('Time [ns]')
                 plt.ylabel('Voltage [uV]')
                 plt.show()
@@ -141,16 +144,19 @@ if len(sys.argv)<3: # grep all antennas from the antenna file
             
             vx=np.zeros(nbins)
             vy=np.zeros(nbins)
+            vz=np.zeros(nbins)
             t=np.fromfunction(lambda i: i*tstep, (nbins,), dtype=float)
             
             
             #Filtering in frequency band
             vx=Filtering(vx,tstep,FREQMIN,FREQMAX)
             vy=Filtering(vy,tstep,FREQMIN,FREQMAX)
+            vz=Filtering(vz,tstep,FREQMIN,FREQMAX)
   
             if DISPLAY==1:
                 plt.plot(t*1e9,vx)
                 plt.plot(t*1e9,vy)
+                plt.plot(t*1e9,vz)
                 plt.xlabel('Time [ns]')
                 plt.ylabel('Voltage [uV]')
                 plt.show()
@@ -159,18 +165,21 @@ if len(sys.argv)<3: # grep all antennas from the antenna file
                 
 ## create the fake traces
 
-        #Filtering in frequency band
-        vx=Filtering(vx,tstep,FREQMIN,FREQMAX)
-        vy=Filtering(vy,tstep,FREQMIN,FREQMAX)
-        if DISPLAY==1:
-            plt.plot(t*1e9,vx)
-            plt.plot(t*1e9,vy)
-            plt.xlabel('Time [ns]')
-            plt.ylabel('Voltage [uV]')
-            plt.show()
+        ##Filtering in frequency band
+        #vx=Filtering(vx,tstep,FREQMIN,FREQMAX)
+        #vy=Filtering(vy,tstep,FREQMIN,FREQMAX)
+        #vz=Filtering(vz,tstep,FREQMIN,FREQMAX)
+        #if DISPLAY==1:
+            #plt.plot(t*1e9,vx)
+            #plt.plot(t*1e9,vy)
+            #plt.plot(t*1e9,vz)
+            #plt.xlabel('Time [ns]')
+            #plt.ylabel('Voltage [uV]')
+            #plt.show()
 
         vx,tx=Digitization(vx,t,tstep,TSAMPLING,SAMPLESIZE)
         vy,ty=Digitization(vy,t,tstep,TSAMPLING,SAMPLESIZE)
+        vz,tz=Digitization(vz,t,tstep,TSAMPLING,SAMPLESIZE)
         if DISPLAY==1:    
             plt.plot(vx)
             plt.plot(vy)
@@ -180,9 +189,11 @@ if len(sys.argv)<3: # grep all antennas from the antenna file
 
         vx=Addnoise(vrms,vx)
         vy=Addnoise(vrms,vy)
+        vz=Addnoise(vrms,vz)
         if DISPLAY==1:
             plt.plot(vx)
             plt.plot(vy)
+            plt.plot(vz)
             plt.xlabel('Time [2 ns bins]')
             plt.ylabel('Voltage [uV]')
             plt.show()
@@ -191,6 +202,6 @@ if len(sys.argv)<3: # grep all antennas from the antenna file
         outfile=path+"/fake_"+str(l)+".txt"
         f = file(outfile,"w")
         for i in np.arange(len(tx)):
-                print >>f,"%e	%1.3e	%1.3e" % (tx[i], vx[i], vy[i] )  # time in s         
+                print >>f,"%e	%1.3e	%1.3e	%1.3e" % (tx[i], vx[i], vy[i], vz[i] )  # time in s         
         f.close()
         print "saved as ", outfile
