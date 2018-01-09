@@ -1,13 +1,15 @@
 ''' this script bases on a script provided by S.LeCoz to filter, mimic digitization and add noise after applying an antenna response
     It can be only applied for complete array or single antenna positions having array.dat and antpos.dat as file
     
-    hand over path to folder containing somulations and antenna files as argument
+    hand over path to folder containing somulations and antenna files as argument: python treatment_ML.py folder_sim
     -> out_*.txt as output from computevoltage.py
     -> antpos.dat containing all antenna position with ID of all antennas which where included in the simulations
     -> array.dat containing the antenna position of the whole field
     
     => output: fake_*.dat with the antenna ID following the lines in array.dat : time in s, EW/nuV, NS/muV (to be checked)
     if antenna position in array.dat was not icnluded in the simulations, this script creates an empty trace and does the filtering, Digitization and the noise adding with it
+    
+    -> all fake traces start and end at the same time. the time window can be adjusted to include the whole array by multiplying a factor to 3mus
     
     => prepare input for NEURAL NETWORK
 ''' 
@@ -32,7 +34,7 @@ def Digitization(v,t,tstep,TSAMPLING,SAMPLESIZE):
     ratio=int(round(TSAMPLING/tstep))
     ind=np.arange(0,int(np.floor(len(v)/ratio)))*ratio
     if len(ind)>SAMPLESIZE:
-        ind=ind[0:SAMPLING]
+        ind=ind[0:TSAMPLING]
     vf[0:len(ind)]=v[ind]
     tf[0:len(ind)]=t[ind]
     for k in range(len(ind),SAMPLESIZE):
@@ -59,16 +61,15 @@ FREQMIN=50e6 #Hz  # frequencies which will be used in the later analysis: 50-200
 FREQMAX=200e6 #Hz, 250MHz
 #tstep=t[1]-t[0]#1e-9, sec, time bins in simulations
 #print " time binning sims ", tstep
-SAMPLESIZE=int(3e-6/TSAMPLING) #=1500, 3e-6sec length # traces lenth of system
+
+times=12 # multiply time window to cover times of complete array
+SAMPLESIZE=int(times* 3e-6/TSAMPLING) #=times* 1500, times* 3e-6sec length # traces lenth of system# assuming ~times*1km extent of footprint along showeraxis
 vrms=15 #uvolts, noise level
 
 
-
-####Handing over one antenna or a whole array  ---- just handing over list of antennas possible at the moment
-#if len(sys.argv)==3: # just one specif antenna handed over
-    #start=int(sys.argv[2]) # antenna ID
-    #end=start+1
-    #print "single antenna with ID: ", str(start)," handed over"
+### read in all time traces of the simulated antennas and try to find min(time) -> start_time for all antenna traces.
+### produce zero-array to fill in the gap between start_time and minimum time of each antenna
+### NOTE: dont forget to adjust the beginning of the time trace to the start_time for the non-simulated antenna position later
 
 if len(sys.argv)<3: # grep all antennas from the antenna file
   
@@ -85,6 +86,20 @@ if len(sys.argv)<3: # grep all antennas from the antenna file
     
     positions_sim=np.genfromtxt(path+'/antpos.dat') # list of simulated antenns positions
     pos_sim=positions_sim.tolist()
+    
+    start_time=1.
+    ant=0
+
+    ##### find minimum and maximum time in whole array
+    for l in range(start,len(pos_sim)):
+            antenna_ID=pos_sim.index(pos[l]) # ID of simulated antenna 
+            voltage_trace=path+"/out_"+str(antenna_ID)+".txt"
+            text=np.loadtxt(voltage_trace)#'out_128.txt')
+            #print min(text.T[0])-b, (min(text.T[0])-b)/(text.T[0,5]-text.T[0,4])
+            if start_time>min(text.T[0]):
+                start_time=min(text.T[0])
+                ant=l
+    #print "starttime ", start_time, ant
 
     ###### loop  over l over all antennas in the full array list
     for l in range(start,end):
@@ -111,6 +126,22 @@ if len(sys.argv)<3: # grep all antennas from the antenna file
 
             tstep=t[5]-t[4]#1e-9, sec, time bins in simulations
             #print "antenna ", str(l)," time binning sims ", tstep, 'total trace length :', t[-1]-t[0], len(t)
+
+#### find offset between min(t) and start_time, add zeros to voltage traces and binned time array to t
+            nb=int(round((min(t)-start_time)/tstep))
+            v_off=np.zeros(nb)
+            vx=np.concatenate((v_off,vx))
+            vy=np.concatenate((v_off,vy))
+            vz=np.concatenate((v_off,vz))
+            
+            t_off=np.fromfunction(lambda i: i*tstep+start_time, (nb,), dtype=float)
+            t=np.concatenate((t_off,t))
+            #if l==0:
+                #print t_off*100000000.
+                #print t*100000000.
+                ##print np.concatenate((t_off,t))*100000000.
+                #break
+
 
             
             if DISPLAY==1:
@@ -145,7 +176,7 @@ if len(sys.argv)<3: # grep all antennas from the antenna file
             vx=np.zeros(nbins)
             vy=np.zeros(nbins)
             vz=np.zeros(nbins)
-            t=np.fromfunction(lambda i: i*tstep, (nbins,), dtype=float)
+            t=np.fromfunction(lambda i: i*tstep+start_time, (nbins,), dtype=float)
             
             
             #Filtering in frequency band
