@@ -1,10 +1,16 @@
+#!/usr/bin/env python
+import os
+from os.path import  join
+
+
 import sys
 import numpy as np
 
 import linecache
 from scipy.fftpack import rfft, irfft, rfftfreq
 from scipy.interpolate import interp1d
-from retro.event import EventIterator
+import retro
+from retro.event import EventIterator, EventLogger
 import modules 
 
 wkdir = './'
@@ -61,7 +67,7 @@ def get_voltage(time1=None,Ex=None, Ey=None, Ez=None, zenith=None, azimuth =None
     azim = np.deg2rad(azim)
     delt = time1[1]-time1[0];
     Fs = 1/delt   
-    time_off=time1[0] # time offset, to get absolute time
+    timeoff=time1[0] # time offset, to get absolute time
     time1 = (time1-time1[0]) #resetted to zero
     #print 'Efield signal length: ', time1[-1]*1e9 , 'ns.'
 
@@ -233,9 +239,9 @@ def get_voltage(time1=None,Ex=None, Ey=None, Ez=None, zenith=None, azimuth =None
     timet     = np.arange(0, len(vt))/Fs
     timep     = np.arange(0, len(vp))/Fs
     
-#    print '    Peak to peak voltage amplitude = ', max(voltage) - min(voltage),'muV'
+    #print '    Peak to peak voltage amplitude = ', max(voltage) - min(voltage),'muV'
 
-    return(voltage, timet+time_off)
+    return(voltage, timet+timeoff)
 
 #===========================================================================================================
 def effective_zenith(zen, azim, alpha, x_ant, y_ant, z_ant, x_xmax=0, y_xmax=0, z_xmax=3000.):
@@ -292,6 +298,10 @@ if __name__ == '__main__':
         #New
         print 'Wrong number of arguments. Usage: python computevoltage.py [path to traces] [slope]  [effective 1/0] [Danton json file] [opt: AntennaID] [opt: antenna x,y,z]'
         ## example: python computevoltage.py ./ 15 0/1 ../Danton/*.json 7 100 100 1000
+        
+        ## -> computes voltage traces for EW, NS and Vertical antenna component and saves the voltage traces in out_'.txt (same folder as a'.trace)
+        ## -> produces a new json file with copying the oroginal one, but saves as well additional informations as p2p-voltages, and peak times and values in *.voltage.json in the same folder as the original json file
+        
         sys.exit(0)
   
     #### Hard coded parameters if needed  
@@ -310,9 +320,13 @@ if __name__ == '__main__':
 
     # decide if the effectice zenith should be calculated (1) or not (0)
     effective = float(sys.argv[3])
+    
+    
+    #######################################################################################
   
     # Read the json file to extract the primary type, the energy and the injection height
     json_file = str(sys.argv[4])
+    path_json = os.path.dirname(json_file)
 
     event = [evt for evt in EventIterator(str(json_file)) if evt["tag"]==showerID][0]
 
@@ -357,6 +371,18 @@ if __name__ == '__main__':
         primary="electron"
     else: # pion-like
         primary="pion"
+        
+        
+   ### json file containing additional data for analysis     
+    filename = str(showerID) + ".voltage.json"
+    path2 = join(path_json, filename)
+    print path2
+    log_event = EventLogger(path=path2)
+    voltage=[] #np.zeros(100)
+    time_peaks=[]
+        
+        
+        
 
     ##########################################################################################
     ###Handing over one antenna or a whole array  
@@ -386,7 +412,7 @@ if __name__ == '__main__':
         print 'Xmax=',Xmax_primary,' Xmax height=',Xmax_height,' Xmax distance =',Xmax_distance,'Xmax position= ',Xmax
     #   print 'Now computing Xmax position from injection height=',injection_height,'m and (zen,azim) values.'
   
-    ###### loop  over l
+###### loop  over l --- LOOP OVER ANTENNA ARRAY
     for l in range(start,end):
         efieldtxt=path+'/a'+str(l)+'.trace'
 
@@ -434,7 +460,13 @@ if __name__ == '__main__':
             # zenith: correct for mountain slope
             zenith_eff= 180.-(zenith_sim+alpha_sim) # in antenna convention
             zenith_eff= 180.- zenith_eff # back to GRAND conventions
-        
+  
+  
+  
+  
+  
+  
+  
         #print 'Effective zenith (in GRAND conventions): ', zenith_eff,' deg.'	  
         #print "Azimuth (in GRAND conventions) ", azimuth_sim,' deg.'    
         if zenith_eff < 90 :
@@ -461,6 +493,8 @@ if __name__ == '__main__':
                 print >>f,"%1.5e	%1.2e	%1.2e	%1.2e" % (timeEW[i], voltage_EW[i], voltage_NS[i], voltage_vert[i] ) # same number of digits as input
             f.close()
 
+
+
             ###plots
             DISPLAY=0
             if DISPLAY==1:
@@ -483,3 +517,45 @@ if __name__ == '__main__':
                 plt.legend(loc='best')
 
                 plt.show()
+
+
+##################################################################
+
+            #### additional output for later study needed  
+            
+            # p2p voltage:  antenna ID, p2p EW, NS, UP, EW+NS
+            voltage_com=np.copy(voltage_EW)
+            for i in range (0, len(voltage_EW)):
+                                voltage_com[i]+=voltage_NS[i]
+            v_list =( str(l),  max(voltage_EW) - min(voltage_EW), max(voltage_NS) - min(voltage_NS), max(voltage_vert) - min(voltage_vert), max(voltage_com) - min(voltage_com)   )
+            voltage.append( v_list )
+            
+     
+            
+            
+            # time of peaks and value: t_EW_max, v_EW_max, t_EW_min, v_EW_min,.... EW, NS, vert, EW+NS 
+            import operator
+            EW_ind_max, value = max(enumerate(voltage_EW), key=operator.itemgetter(1))
+            EW_ind_min, value = min(enumerate(voltage_EW), key=operator.itemgetter(1))
+            
+            NS_ind_max, value = max(enumerate(voltage_NS), key=operator.itemgetter(1))
+            NS_ind_min, value = min(enumerate(voltage_NS), key=operator.itemgetter(1))
+            
+            vert_ind_max, value = max(enumerate(voltage_vert), key=operator.itemgetter(1))
+            vert_ind_min, value = min(enumerate(voltage_vert), key=operator.itemgetter(1))
+    
+            com_ind_max, value = max(enumerate(voltage_com), key=operator.itemgetter(1))
+            com_ind_min, value = min(enumerate(voltage_com), key=operator.itemgetter(1))
+            
+            time_peaks.append( (round(timeEW[EW_ind_max],11),  voltage_EW[EW_ind_max], round(timeEW[EW_ind_min],11), voltage_EW[EW_ind_min],   
+                                round(timeNS[NS_ind_max],11), voltage_NS[NS_ind_max], round(timeNS[NS_ind_min],11), voltage_NS[NS_ind_min],
+                                round(timevert[vert_ind_max],11), voltage_vert[vert_ind_max], round(timevert[vert_ind_min],11), voltage_vert[vert_ind_min],
+                                round(timeEW[com_ind_max],11), voltage_com[com_ind_max], round(timeEW[com_ind_min],11), voltage_com[com_ind_min] )  )
+
+
+############### end of loop over antennas
+        
+    event['voltage'] = voltage # muV
+    event['time_peaks'] = time_peaks # s, muV
+
+    log_event(**event)
