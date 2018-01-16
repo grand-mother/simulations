@@ -554,8 +554,10 @@ if __name__ == '__main__':
 
 
 ############### end of loop over antennas
-        
-    event['voltage'] = voltage # muV
-    event['time_peaks'] = time_peaks # s, muV
-
-    log_event(**event)
+    if len(voltage)==0:
+        print "- effective zenith not fulfilled - NO VOLTAGE COMPUTED"
+    else:    
+        # add the additional informations to the shower event    
+        event['voltage'] = voltage # muV
+        event['time_peaks'] = time_peaks # s, muV
+        log_event(**event)
