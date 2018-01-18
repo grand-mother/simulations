@@ -11,8 +11,13 @@ myfields=$basedir/$pool/fields
 myvoltages=$basedir/$pool/voltages
 myseeds=$basedir/$pool/seeds
 
-#$todofile=$basedir/computevoltage_Xmax.sh.todofile
-#ntotal=`cat $todofile |wc -l`
+todofile=$basedir/todofile.txt
+
+if [ ! -f $todofile ]; then
+   find $myfields/ -name "*.tgz" |xargs ls > $todofile
+fi
+ntotal=`cat $todofile |wc -l`
+
 
 #donefile=${0}.done
 donefile=$basedir/computevoltage_Xmax.sh.done
@@ -23,14 +28,14 @@ if [ -f $donefile ] ; then
    echo "Last field processed: $lastfieldid "
    #ls -lhtr  $myfields/$lastfieldid/out.tar.gz
 
-   dirs=`find $myfields/ -name "*.tgz" -type f  -newer ${lastfieldid}.tgz |xargs ls -tr` #jlzhang, when rerun, avoid the time order bug   
-   ndirs=`find $myfields/ -name "*.tgz" -type f  -newer ${lastfieldid}.tgz | wc -l`
-   #lastfieldidn=`grep -n $lastfieldid $todofile  | gawk -F ':' '{print $1}` #if all field files are ready
-   #dirs=`tail -$lastfieldidn $todofile`
-   #ndirs=$((ntotal-n))
+   #dirs=`find $myfields/ -name "*.tgz" -type f  -newer ${lastfieldid}.tgz |xargs ls -tr` #jlzhang, when rerun, avoid the time order bug   
+   #ndirs=`find $myfields/ -name "*.tgz" -type f  -newer ${lastfieldid}.tgz | wc -l`
+   lastfieldidn=`grep -n $lastfieldid $todofile  | gawk -F ':' '{print $1}'` #if all field files are ready
+   dirs=`tail -$lastfieldidn $todofile` #or tail -$lastfieldidn $todofile > /tmp/${0}.txt
+   ndirs=$((ntotal-n))
 else
-   dirs=`find $myfields/ -name "*.tgz" |xargs ls -tr`
-   ndirs=`find $myfields/ -name "*.tgz" |wc -l`
+   dirs=`cat $todofile`
+   ndirs=$ntotal
    #dirs=/sps/trend/jlzhang/production/grandproto/fields/10850122/out.tar.gz #for test only
 fi
 echo "Nb of fields to be processed: $ndirs" 
