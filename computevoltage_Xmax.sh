@@ -11,8 +11,9 @@ myfields=$basedir/$pool/fields
 myvoltages=$basedir/$pool/voltages
 myseeds=$basedir/$pool/seeds
 
-todofile=$basedir/todofile.txt
-
+todofile=$basedir/diff.txt #run diff.sh first
+#todofile=$basedir/todofile.txt
+#same as run gen_todofile.sh first
 if [ ! -f $todofile ]; then
    find $myfields/ -name "*.tgz" |xargs ls > $todofile
 fi
@@ -26,13 +27,10 @@ echo $donefile
 if [ -f $donefile ] ; then
    lastfieldid=$(tail -1 $donefile)
    echo "Last field processed: $lastfieldid "
-   #ls -lhtr  $myfields/$lastfieldid/out.tar.gz
 
-   #dirs=`find $myfields/ -name "*.tgz" -type f  -newer ${lastfieldid}.tgz |xargs ls -tr` #jlzhang, when rerun, avoid the time order bug   
-   #ndirs=`find $myfields/ -name "*.tgz" -type f  -newer ${lastfieldid}.tgz | wc -l`
-   lastfieldidn=`grep -n $lastfieldid $todofile  | gawk -F ':' '{print $1}'` #if all field files are ready
-   dirs=`tail -$lastfieldidn $todofile` #or tail -$lastfieldidn $todofile > /tmp/${0}.txt
-   ndirs=$((ntotal-n))
+   lastfieldidn=`grep -n $lastfieldid $todofile  | gawk -F ':' '{print $1}'` #if all field files are ready. if cann't grep, lastfieldidn=0
+   ndirs=$((ntotal-lastfieldidn))
+   dirs=`tail -$lastfieldidn $todofile ` #or tail -$lastfieldidn $todofile > /tmp/${0}.txt
 else
    dirs=`cat $todofile`
    ndirs=$ntotal
