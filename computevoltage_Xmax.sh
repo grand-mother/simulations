@@ -38,8 +38,8 @@ echo "Press a key to proceed..."
 #stty icanon
 
 #for dir in  $myfields/E*/*
-#for dir in $dirs 
-for dir in /scratchfs/ybj/jlzhang/grand/sim/flat-100x100km2/fields/E.5e18_X.181841_Y.39925_Z.541_T.91_P.33_D.12135181768782943.tgz
+for dir in $dirs 
+#for dir in /scratchfs/ybj/jlzhang/grand/sim/flat-100x100km2/fields/E.5e18_X.181841_Y.39925_Z.541_T.91_P.33_D.12135181768782943.tgz
 do
 
   echo "Now processing  folder " $dir
