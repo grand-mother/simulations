@@ -289,14 +289,14 @@ def effective_zenith(zen, azim, alpha, x_ant, y_ant, z_ant, x_xmax=0, y_xmax=0, 
 #===========================================================================================================
 if __name__ == '__main__':
   
-    if len(sys.argv)<5:
+    if len(sys.argv)<6:
         #Old
         #print 'Wrong number of arguments. Usage: python computevoltage.py [zenith] [azimuth] [slope] [path to traces] [effective 1/0]  [opt: AntennaID] [opt: antenna x,y,z]'
         ## example: python computevoltage.py 85 45 0/1 ./ 7 100 100 1000
         ## if effective zenith wanted -- inside function, set effective to 1 plus hand over antenna postion x,y,z in m:  python computevoltage.py 85 45 0 ./ 0 a0.trace 0 34000 3000
 
         #New
-        print 'Wrong number of arguments. Usage: python computevoltage.py [path to traces] [slope]  [effective 1/0] [Danton json file] [opt: AntennaID] [opt: antenna x,y,z]'
+        print 'Wrong number of arguments. Usage: python computevoltage.py [path to traces] [path to voltages] [slope]  [effective 1/0] [Danton json file] [opt: AntennaID] [opt: antenna x,y,z]'
         ## example: python computevoltage.py ./ 15 0/1 ../Danton/*.json 7 100 100 1000
         
         ## -> computes voltage traces for EW, NS and Vertical antenna component and saves the voltage traces in out_'.txt (same folder as a'.trace)
@@ -310,22 +310,24 @@ if __name__ == '__main__':
     #energy=1. #EeV
 
     # include a mountain slope - correction of zenith angle
-    alpha_sim=float(sys.argv[2])
+    alpha_sim=float(sys.argv[3])
 
     # which efield trace do you wanna read in. to be consistent the script works with the antenna ID
     path=sys.argv[1] #folder containing the traces and where the output should go to
+    pathout=sys.argv[2] #folder where the output should go to
+
     showerID = str(path.split('/')[-1])
     if not showerID:
         showerID = str(path.split('/')[-2])
 
     # decide if the effectice zenith should be calculated (1) or not (0)
-    effective = float(sys.argv[3])
+    effective = float(sys.argv[4])
     
     
     #######################################################################################
   
     # Read the json file to extract the primary type, the energy and the injection height
-    json_file = str(sys.argv[4])
+    json_file = str(sys.argv[5])
     path_json = os.path.dirname(json_file)
 
     event = [evt for evt in EventIterator(str(json_file)) if evt["tag"]==showerID][0]
@@ -387,11 +389,11 @@ if __name__ == '__main__':
     ##########################################################################################
     ###Handing over one antenna or a whole array  
 
-    if len(sys.argv)>=6: # just one specif antenna handed over
-        start=int(sys.argv[5]) # antenna ID
+    if len(sys.argv)>=7: # just one specif antenna handed over
+        start=int(sys.argv[6]) # antenna ID
         end=start+1
     #    print "single antenna with ID: ", str(start)," handed over"
-    if  len(sys.argv)<6: # grep all antennas from the antenna file
+    if  len(sys.argv)<7: # grep all antennas from the antenna file
   
         positions=np.genfromtxt(path+'/antpos.dat')
         start=0
@@ -434,11 +436,11 @@ if __name__ == '__main__':
         
             # Compute effective zenith
             # First get antenna position
-            if len(sys.argv)==9:
+            if len(sys.argv)==10:
         #        print 'Reading antenna position from parameter input.'
-                x_sim = float(sys.argv[6])
-                y_sim = float(sys.argv[7])
-                z_sim = float(sys.argv[8])
+                x_sim = float(sys.argv[7])
+                y_sim = float(sys.argv[8])
+                z_sim = float(sys.argv[9])
 
             else :
                 try :
@@ -488,7 +490,7 @@ if __name__ == '__main__':
 
             #pl.savetxt(path+'out_'+str(l)+'.txt', (timeEW, voltage_EW, voltage_NS), newline='\r\n')#, voltage_NS)) # is not working correctly
 
-            f = file(path+'/out_'+str(l)+'.txt',"w")
+            f = file(pathout+'/out_'+str(l)+'.txt',"w")
             for i in np.arange(len(timeEW)):
                 print >>f,"%1.5e	%1.2e	%1.2e	%1.2e" % (timeEW[i], voltage_EW[i], voltage_NS[i], voltage_vert[i] ) # same number of digits as input
             f.close()
