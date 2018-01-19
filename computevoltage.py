@@ -10,7 +10,7 @@ from scipy.interpolate import interp1d
 fileleff='HorizonAntenna_leff_loaded.npy' # 'HorizonAntenna_leff_notloaded.npy' if loaded=0
 freq,realimp,reactance,theta,phi,lefftheta,leffphi,phasetheta,phasephi=np.load(fileleff) ### this line cost 6-7s
 
-
+#azstep must be =5 if file is butthalftriple*4p5m.out
 azstep=1 #step in azimuth in npy file
 freqscale=1 #freq*2 if h/2 and sizeant/2
 outputpower=0 #if wanted output is power
