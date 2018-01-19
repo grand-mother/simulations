@@ -288,7 +288,7 @@ def effective_angles(alpha, beta, x_ant, y_ant, z_ant, x_xmax=0, y_xmax=0, z_xma
 if __name__ == '__main__':
   
   if len(sys.argv)<4:
-        print 'Wrong number of arguments. Usage: python computevoltage.py [zenith] [azimuth] [slope zen] [slope azim] [path to traces] [effective 1/0]  [opt: AntennaID] [opt: antenna x,y,z]'
+        print 'Wrong number of arguments. Usage: python computevoltage.py [zenith] [azimuth] [path to traces] [effective 1/0]  [opt: AntennaID] [opt: antenna x,y,z,alpha,beta]'
     	## example: python computevoltage.py 85 45 0/1 ./ 7 100 100 1000
 	## if effective zenith wanted -- inside function, set effective to 1 plus hand over antenna postion x,y,z in m:  python computevoltage.py 85 45 0 ./ 0 a0.trace 0 34000 3000
   	## Zenith and azimuth here in deg & using GRAND conventions
@@ -299,21 +299,21 @@ if __name__ == '__main__':
   azimuth_sim=float(sys.argv[2])
 
   ## include a mountain slope - correction of zenith angle
-  alpha_sim=float(sys.argv[3])
-  beta_sim=float(sys.argv[4])
+  #alpha_sim=float(sys.argv[3])
+  #beta_sim=float(sys.argv[4])
 
   # which efield trace do you wanna read in. to be consistent the script works with the antenna ID
-  path=sys.argv[5] #folder containing the traces and where the output should go to
+  path=sys.argv[3] #folder containing the traces and where the output should go to
   
   # decide if the effectice zenith should be calculated (1) or not (0)
-  effective = float(sys.argv[6])
+  effective = float(sys.argv[4])
   
   ###Handing over one antenna or a whole array  
-  if len(sys.argv)==8: # just one specif antenna handed over
-    start=int(sys.argv[7]) # antenna ID
+  if len(sys.argv)==6: # just one specif antenna handed over
+    start=int(sys.argv[5]) # antenna ID
     end=start+1
     print "single antenna with ID: ", str(start)," handed over"
-  if  len(sys.argv)<8: # grep all antennas from the antenna file
+  if  len(sys.argv)<6: # grep all antennas from the antenna file
   
     positions=np.genfromtxt(path+'/antpos.dat')
     start=0
@@ -344,18 +344,21 @@ if __name__ == '__main__':
         
     # Compute effective zenith
             # First get antenna position
-            if len(sys.argv)==10:
+            if len(sys.argv)==11:
                     print 'Reading antenna position from parameter input.'
-                    x_sim = float(sys.argv[7])
-                    y_sim = float(sys.argv[8])
-                    z_sim = float(sys.argv[9])
+                    x_sim = float(sys.argv[6])
+                    y_sim = float(sys.argv[7])
+                    z_sim = float(sys.argv[8])
+		    alpha_sim=float(sys.argv[9])
+		    beta_sim=float(sys.argv[10])
     
             else :
                     try :
                             #print 'Trying to read antenna position from antpos.dat file...'
                             numberline = int(l) + 1
                             line = linecache.getline(path+'/antpos.dat', numberline)
-                            [x_sim, y_sim, z_sim] = map(float, line.split())
+                            #[x_sim, y_sim, z_sim] = map(float, line.split())
+			    [x_sim, y_sim, z_sim, alpha_sim, beta_sim] = map(float, line.split())
                             print 'Read antenna position from antpos.dat file... Antenna',l,' at position [', x_sim, y_sim, z_sim,'].'
     
                     except : 
