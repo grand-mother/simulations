@@ -81,7 +81,7 @@ do
      echo "Field is being processed: $myvoltages/$runname exists"
      continue
   elif [ -f $FILETEST.tgz ]; then
-       nout=`tar ztf $$FILETEST.tgz |wc -l`
+       nout=`tar ztf $FILETEST.tgz |wc -l`
        nout=$((nout-2))
        echo "Field is being processed: $myvoltages/$runname.tgz exists"
        continue
