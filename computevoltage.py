@@ -277,9 +277,9 @@ def effective_angles(alpha, beta, x_ant, y_ant, z_ant, x_xmax=0, y_xmax=0, z_xma
 
 	xmax_inant=TopoToAntenna(x_xmax, y_xmax, z_xmax, x_ant, y_ant, z_ant, alpha, beta)
 	xmax_inant=xmax_inant/np.linalg.norm(xmax_inant)
-	zen_inant=np.acos(xmax_inant[2])*180/np.pi
-	azim_inant=np.acos(xmax_inant[0]/np.sin(zen_inant))*180/np.pi
-	
+	zen_inant=np.arccos(xmax_inant[2])
+	azim_inant=np.arccos(xmax_inant[0]/np.sin(zen_inant))*180/np.pi
+	zen_inant=zen_inant*180/np.pi
 	return zen_inant,azim_inant
 
 #===========================================================================================================
