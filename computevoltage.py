@@ -10,7 +10,7 @@ from scipy.interpolate import interp1d
 fileleff='HorizonAntenna_leff_loaded.npy' # 'HorizonAntenna_leff_notloaded.npy' if loaded=0
 freq,realimp,reactance,theta,phi,lefftheta,leffphi,phasetheta,phasephi=np.load(fileleff) ### this line cost 6-7s
 
-
+#azstep must be =5 if file is butthalftriple*4p5m.out
 azstep=1 #step in azimuth in npy file
 freqscale=1 #freq*2 if h/2 and sizeant/2
 outputpower=0 #if wanted output is power
@@ -47,7 +47,7 @@ def GRANDtoNEC(zenith=None, azimuth =None):
 def get_voltage(time1=None,Ex=None, Ey=None, Ez=None, zenith=None, azimuth =None, EW=1):
 #===========================================================================================================
     # Note: azim & zenith are in GRAND conventions
-    zen, azim = GRANDtoNEC(zenith,azimuth)
+    #zen, azim = GRANDtoNEC(zenith,azimuth) #not needed anymore
     #print 'get_voltage: computing antenna response for wave with zenith=',zen,'deg, azimuth=',azim,'deg (**NEC conventions**).'
     zen = np.deg2rad(zen)
     azim = np.deg2rad(azim)
@@ -216,10 +216,10 @@ def get_voltage(time1=None,Ex=None, Ey=None, Ez=None, zenith=None, azimuth =None
 
 
 #===========================================================================================================
-def effective_zenith(zen, azim, alpha, x_ant, y_ant, z_ant, x_xmax=0, y_xmax=0, z_xmax=3000.):
+def effective_angles(alpha, beta, x_ant, y_ant, z_ant, x_xmax=0, y_xmax=0, z_xmax=3000.):
 #===========================================================================================================	
 # Effective zenith (computed in GRAND conventions, ie theta>90deg <=> downward)
-	zen = np.deg2rad(zen)
+	'''zen = np.deg2rad(zen)
 	azim = np.deg2rad(azim)
 	alpha = np.deg2rad(alpha)
 	
@@ -258,8 +258,29 @@ def effective_zenith(zen, azim, alpha, x_ant, y_ant, z_ant, x_xmax=0, y_xmax=0, 
 	
 	#zen_eff=180-zen_eff
 
-	return zen_eff
+	return zen_eff'''
+	
+	#the following replace the lines above, output is angles already in NEC convention
+	#it calculates zenith and azimuth angles of Xmax in the antenna frame (where antenna wood pole is along the z axis)
+	def TopoToAntenna(x,y,z,xant,yant,zant,alpha,beta): #from coordinates in the topography frame to coordinates in the antenna frame
+	    xp=x-xant
+	    yp=y-yant
+	    zp=z-zant
+	    #cross product rotation of alpha around y, then of beta around z
+	    alpha=alpha*np.pi/180 #around y=theta
+	    beta=beta*np.pi/180 #around z=phi
+	    #(RzRy)-1
+	    xpp=np.cos(beta)*np.cos(alpha)*xp + np.sin(beta)*np.cos(alpha)*yp - np.sin(alpha)*zp
+	    ypp=-np.sin(beta)*xp + np.cos(beta)*yp
+	    zpp=np.cos(beta)*np.sin(alpha)*xp + np.sin(beta)*np.sin(alpha)*yp + np.cos(alpha)*zp
+	    return xpp,ypp,zpp
 
+	xmax_inant=TopoToAntenna(x_xmax, y_xmax, z_xmax, x_ant, y_ant, z_ant, alpha, beta)
+	xmax_inant=xmax_inant/np.linalg.norm(xmax_inant)
+	zen_inant=np.arccos(xmax_inant[2])
+	azim_inant=np.arccos(xmax_inant[0]/np.sin(zen_inant))*180/np.pi
+	zen_inant=zen_inant*180/np.pi
+	return zen_inant,azim_inant
 
 #===========================================================================================================
 # Compute the time dependent voltage
@@ -267,7 +288,7 @@ def effective_zenith(zen, azim, alpha, x_ant, y_ant, z_ant, x_xmax=0, y_xmax=0, 
 if __name__ == '__main__':
   
   if len(sys.argv)<4:
-        print 'Wrong number of arguments. Usage: python computevoltage.py [zenith] [azimuth] [slope] [path to traces] [effective 1/0]  [opt: AntennaID] [opt: antenna x,y,z]'
+        print 'Wrong number of arguments. Usage: python computevoltage.py [zenith] [azimuth] [path to traces] [effective 1/0]  [opt: AntennaID] [opt: antenna x,y,z,alpha,beta]'
     	## example: python computevoltage.py 85 45 0/1 ./ 7 100 100 1000
 	## if effective zenith wanted -- inside function, set effective to 1 plus hand over antenna postion x,y,z in m:  python computevoltage.py 85 45 0 ./ 0 a0.trace 0 34000 3000
   	## Zenith and azimuth here in deg & using GRAND conventions
@@ -278,20 +299,21 @@ if __name__ == '__main__':
   azimuth_sim=float(sys.argv[2])
 
   ## include a mountain slope - correction of zenith angle
-  alpha_sim=float(sys.argv[3])
+  #alpha_sim=float(sys.argv[3])
+  #beta_sim=float(sys.argv[4])
 
   # which efield trace do you wanna read in. to be consistent the script works with the antenna ID
-  path=sys.argv[4] #folder containing the traces and where the output should go to
+  path=sys.argv[3] #folder containing the traces and where the output should go to
   
   # decide if the effectice zenith should be calculated (1) or not (0)
-  effective = float(sys.argv[5])
+  effective = float(sys.argv[4])
   
   ###Handing over one antenna or a whole array  
-  if len(sys.argv)==7: # just one specif antenna handed over
-    start=int(sys.argv[6]) # antenna ID
+  if len(sys.argv)==6: # just one specif antenna handed over
+    start=int(sys.argv[5]) # antenna ID
     end=start+1
     print "single antenna with ID: ", str(start)," handed over"
-  if  len(sys.argv)<7: # grep all antennas from the antenna file
+  if  len(sys.argv)<6: # grep all antennas from the antenna file
   
     positions=np.genfromtxt(path+'/antpos.dat')
     start=0
@@ -322,18 +344,21 @@ if __name__ == '__main__':
         
     # Compute effective zenith
             # First get antenna position
-            if len(sys.argv)==10:
+            if len(sys.argv)==11:
                     print 'Reading antenna position from parameter input.'
-                    x_sim = float(sys.argv[7])
-                    y_sim = float(sys.argv[8])
-                    z_sim = float(sys.argv[9])
+                    x_sim = float(sys.argv[6])
+                    y_sim = float(sys.argv[7])
+                    z_sim = float(sys.argv[8])
+		    alpha_sim=float(sys.argv[9])
+		    beta_sim=float(sys.argv[10])
     
             else :
                     try :
                             #print 'Trying to read antenna position from antpos.dat file...'
                             numberline = int(l) + 1
                             line = linecache.getline(path+'/antpos.dat', numberline)
-                            [x_sim, y_sim, z_sim] = map(float, line.split())
+                            #[x_sim, y_sim, z_sim] = map(float, line.split())
+			    [x_sim, y_sim, z_sim, alpha_sim, beta_sim] = map(float, line.split())
                             print 'Read antenna position from antpos.dat file... Antenna',l,' at position [', x_sim, y_sim, z_sim,'].'
     
                     except : 
@@ -350,28 +375,31 @@ if __name__ == '__main__':
             Xmax = hor_dist/szen*np.array([caz*szen, saz*szen, czen])+np.array([0,0,injection_height])
             #print 'Xmax = ',Xmax
             # Finally compute effective zenith
-            zenith_eff = effective_zenith(zenith_sim, azimuth_sim, alpha_sim, x_sim, y_sim, z_sim, Xmax[0], Xmax[1], Xmax[2])
-            print "zenith effective: ", zenith_eff # deg
+            #zenith_eff = effective_zenith(zenith_sim, azimuth_sim, alpha_sim, x_sim, y_sim, z_sim, Xmax[0], Xmax[1], Xmax[2])
+            #print "zenith effective: ", zenith_eff # deg
+	    zen_inant,azim_inant = effective_angles(alpha_sim, beta_sim, x_sim, y_sim, z_sim, Xmax[0], Xmax[1], Xmax[2])
 
     else: # in case effective zenith not wanted, one still has to account for mountain slope 
             ## zenith: correct for mountain slope
-            zenith_eff= 180.-(zenith_sim+alpha_sim) # in antenna convention
-            zenith_eff= 180.- zenith_eff # back to GRAND conventions
+            #zenith_eff= 180.-(zenith_sim+alpha_sim) # in antenna convention
+            #zenith_eff= 180.- zenith_eff # back to GRAND conventions
+	    print('Not supported')
         
     #print 'Effective zenith (in GRAND conventions): ', zenith_eff,' deg.'	  
     #print "Azimuth (in GRAND conventions) ", azimuth_sim,' deg.'    
-    if zenith_eff < 90 :
+    #if zenith_eff < 90 :
+    if zen_inant > 90 :
             print ' --- Wave coming from ground (GRAND zenith smaller than 90deg), antenna response not computed for that angle. Abort --- '
             exit()
 
     # Compute the output voltage for EW component
     print '*** Computing EW voltage...'
-    voltage_EW, timeEW  = get_voltage( time1=time1_sim,Ex=Ex_sim, Ey=Ey_sim, Ez=Ez_sim, zenith=zenith_eff, azimuth=azimuth_sim, EW=1)
-
+    #voltage_EW, timeEW  = get_voltage( time1=time1_sim,Ex=Ex_sim, Ey=Ey_sim, Ez=Ez_sim, zenith=zenith_eff, azimuth=azimuth_sim, EW=1)
+    voltage_EW, timeEW  = get_voltage( time1=time1_sim,Ex=Ex_sim, Ey=Ey_sim, Ez=Ez_sim, zenith=zen_inant, azimuth=azim_inant, EW=1)
     # Compute the output voltage for NS component -- TODO add here the correct antenna file at some point
     print '*** Computing SN voltage...'
-    voltage_NS, timeNS = get_voltage( time1=time1_sim,Ex=Ex_sim, Ey=Ey_sim, Ez=Ez_sim, zenith=zenith_eff, azimuth=azimuth_sim, EW=0)
-
+    #voltage_NS, timeNS = get_voltage( time1=time1_sim,Ex=Ex_sim, Ey=Ey_sim, Ez=Ez_sim, zenith=zenith_eff, azimuth=azimuth_sim, EW=0)
+    voltage_NS, timeNS = get_voltage( time1=time1_sim,Ex=Ex_sim, Ey=Ey_sim, Ez=Ez_sim, zenith=zen_inant, azimuth=azim_inant, EW=0)
     #pl.savetxt(path+'out_'+str(l)+'.txt', (timeEW, voltage_EW, voltage_NS), newline='\r\n')#, voltage_NS)) # is not working correctly
 
     f = file(path+'/out_'+str(l)+'.txt',"w")
