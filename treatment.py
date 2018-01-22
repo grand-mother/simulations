@@ -63,6 +63,15 @@ if DISPLAY==1:
     plt.ylabel('Voltage [uV]')
     plt.show()
 
+vx=Addnoise(vrms,vx)
+vy=Addnoise(vrms,vy)
+if DISPLAY==1:
+    plt.plot(vx)
+    plt.plot(vy)
+    plt.xlabel('Time [2 ns bins]')
+    plt.ylabel('Voltage [uV]')
+    plt.show()
+    
 vx,tx=Digitization(vx,t,tstep,TSAMPLING,SAMPLESIZE)
 vy,ty=Digitization(vy,t,tstep,TSAMPLING,SAMPLESIZE)
 if DISPLAY==1:    
@@ -72,14 +81,6 @@ if DISPLAY==1:
     plt.ylabel('Voltage [uV]')
     plt.show()
 
-vx=Addnoise(vrms,vx)
-vy=Addnoise(vrms,vy)
-if DISPLAY==1:
-    plt.plot(vx)
-    plt.plot(vy)
-    plt.xlabel('Time [2 ns bins]')
-    plt.ylabel('Voltage [uV]')
-    plt.show()
 
 
 outfile=str(sys.argv[1])+"/fake_"+str(sys.argv[2])+".txt"
