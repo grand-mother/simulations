@@ -546,9 +546,7 @@ def compute(opt_input,path, effective,zenith_sim, azimuth_sim, energy, injection
             else :
                 try :
                     if opt_input=='json':
-                        x_sim,y_sim,z_sim = positions[l] #,alpha_sim,beta_sim
-                        alpha_sim = 0
-                        beta_sim = 0
+                        x_sim,y_sim,z_sim,alpha_sim,beta_sim = positions[l]
                     else:
                         #print 'Trying to read antenna position from antpos.dat file...'
                         numberline = int(l) + 1
