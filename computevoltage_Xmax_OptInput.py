@@ -4,6 +4,11 @@ from os.path import  join
 import sys
 import numpy as np
 
+
+sys.path.append('/Users/nrenault/Desktop/GRAND/retro-master/lib/python/')
+#wkdir = './'
+wkdir = '/Users/nrenault/Desktop/GRAND/scripts_clean/'
+
 import linecache
 from scipy.fftpack import rfft, irfft, rfftfreq
 from scipy.interpolate import interp1d
@@ -11,7 +16,6 @@ import retro
 from retro.event import EventIterator, EventLogger
 import modules 
 
-wkdir = './'
 EARTH_RADIUS=6370949. #m
 azstep=1 #step in azimuth in npy file
 freqscale=1 #freq*2 if h/2 and sizeant/2
@@ -262,7 +266,7 @@ def effective_zenith(zen, azim, alpha, x_ant, y_ant, z_ant, x_xmax=0, y_xmax=0, 
     azim = np.deg2rad(azim)
     alpha = np.deg2rad(alpha)
     
-    print "input zen, azim, alpha : ", np.rad2deg(zen), np.rad2deg(azim), np.rad2deg(alpha)
+    #print "input zen, azim, alpha : ", np.rad2deg(zen), np.rad2deg(azim), np.rad2deg(alpha)
     
     #print 'Now computing effective zenith angle to Xmax from antenna location.'
     
@@ -474,7 +478,9 @@ def compute(opt_input,path, effective,zenith_sim, azimuth_sim, energy, injection
             end=start+1
         #    print "single antenna with ID: ", str(start)," handed over"
         if  len(sys.argv)<6: # grep all antennas from the antenna file
-            positions=event["antennas"]
+            positions=np.array(event["antennas"],dtype=float)
+            decay_pos=event["tau_at_decay"][1]
+            positions = positions - [decay_pos[0],decay_pos[1],0.]
             #positions=np.genfromtxt(path+'/antpos.dat')
             start=0
             end=len(positions)
@@ -546,7 +552,9 @@ def compute(opt_input,path, effective,zenith_sim, azimuth_sim, energy, injection
             else :
                 try :
                     if opt_input=='json':
-                        x_sim,y_sim,z_sim,alpha_sim,beta_sim = positions[l]
+                        x_sim,y_sim,z_sim = positions[l] #,alpha_sim,beta_sim
+                        alpha_sim = 0.
+                        beta_sim = 0.
                     else:
                         #print 'Trying to read antenna position from antpos.dat file...'
                         numberline = int(l) + 1
@@ -559,9 +567,12 @@ def compute(opt_input,path, effective,zenith_sim, azimuth_sim, energy, injection
                     sys.exit()
 
             # Finally compute effective zenith
+            alpha_sim = 0.
+            print "input zen, azim, alpha,beta : ", zenith_sim, azimuth_sim, alpha_sim,beta_sim
             zenith_eff = effective_zenith(zenith_sim, azimuth_sim, alpha_sim, x_sim, y_sim, z_sim, Xmax[0], Xmax[1], Xmax[2])
+            print 'zenith_eff = ',zenith_eff
             zen_inant,azim_inant = effective_angles(alpha_sim, beta_sim, x_sim, y_sim, z_sim, Xmax[0], Xmax[1], Xmax[2])
-            #print "effective zenith and azimuth in GRAND convention: ", zen_inant,azim_inant,' deg'
+            print "effective zenith and azimuth in GRAND convention: ", zen_inant,azim_inant,' deg'
 
         else: # in case effective zenith not wanted, one still has to account for mountain slope 
             # zenith: correct for mountain slope
@@ -622,32 +633,33 @@ def compute(opt_input,path, effective,zenith_sim, azimuth_sim, energy, injection
 
 ##################################################################
 ##################################################################
-            #### additional output needed for later study, added in the json file
-            # p2p voltage:  antenna ID, p2p EW, NS, UP, EW+NS
-            voltage_com=np.copy(voltage_EW)
-            for i in range (0, len(voltage_EW)):
-                                voltage_com[i]+=voltage_NS[i]
-            v_list =( str(l),  max(voltage_EW) - min(voltage_EW), max(voltage_NS) - min(voltage_NS), max(voltage_vert) - min(voltage_vert), max(voltage_com) - min(voltage_com)   )
-            voltage.append( v_list )
-            
-            # time of peaks and value: t_EW_max, v_EW_max, t_EW_min, v_EW_min,.... EW, NS, vert, EW+NS 
-            import operator
-            EW_ind_max, value = max(enumerate(voltage_EW), key=operator.itemgetter(1))
-            EW_ind_min, value = min(enumerate(voltage_EW), key=operator.itemgetter(1))
-            
-            NS_ind_max, value = max(enumerate(voltage_NS), key=operator.itemgetter(1))
-            NS_ind_min, value = min(enumerate(voltage_NS), key=operator.itemgetter(1))
-            
-            vert_ind_max, value = max(enumerate(voltage_vert), key=operator.itemgetter(1))
-            vert_ind_min, value = min(enumerate(voltage_vert), key=operator.itemgetter(1))
-    
-            com_ind_max, value = max(enumerate(voltage_com), key=operator.itemgetter(1))
-            com_ind_min, value = min(enumerate(voltage_com), key=operator.itemgetter(1))
-            
-            time_peaks.append( (round(timeEW[EW_ind_max],11),  voltage_EW[EW_ind_max], round(timeEW[EW_ind_min],11), voltage_EW[EW_ind_min],   
-                                round(timeNS[NS_ind_max],11), voltage_NS[NS_ind_max], round(timeNS[NS_ind_min],11), voltage_NS[NS_ind_min],
-                                round(timevert[vert_ind_max],11), voltage_vert[vert_ind_max], round(timevert[vert_ind_min],11), voltage_vert[vert_ind_min],
-                                round(timeEW[com_ind_max],11), voltage_com[com_ind_max], round(timeEW[com_ind_min],11), voltage_com[com_ind_min] )  )
+            if opt_input=='json': 
+                #### additional output needed for later study, added in the json file
+                # p2p voltage:  antenna ID, p2p EW, NS, UP, EW+NS
+                voltage_com=np.copy(voltage_EW)
+                for i in range (0, len(voltage_EW)):
+                                    voltage_com[i]+=voltage_NS[i]
+                v_list =( str(l),  max(voltage_EW) - min(voltage_EW), max(voltage_NS) - min(voltage_NS), max(voltage_vert) - min(voltage_vert), max(voltage_com) - min(voltage_com)   )
+                voltage.append( v_list )
+                
+                # time of peaks and value: t_EW_max, v_EW_max, t_EW_min, v_EW_min,.... EW, NS, vert, EW+NS 
+                import operator
+                EW_ind_max, value = max(enumerate(voltage_EW), key=operator.itemgetter(1))
+                EW_ind_min, value = min(enumerate(voltage_EW), key=operator.itemgetter(1))
+                
+                NS_ind_max, value = max(enumerate(voltage_NS), key=operator.itemgetter(1))
+                NS_ind_min, value = min(enumerate(voltage_NS), key=operator.itemgetter(1))
+                
+                vert_ind_max, value = max(enumerate(voltage_vert), key=operator.itemgetter(1))
+                vert_ind_min, value = min(enumerate(voltage_vert), key=operator.itemgetter(1))
+        
+                com_ind_max, value = max(enumerate(voltage_com), key=operator.itemgetter(1))
+                com_ind_min, value = min(enumerate(voltage_com), key=operator.itemgetter(1))
+                
+                time_peaks.append( (round(timeEW[EW_ind_max],11),  voltage_EW[EW_ind_max], round(timeEW[EW_ind_min],11), voltage_EW[EW_ind_min],   
+                                    round(timeNS[NS_ind_max],11), voltage_NS[NS_ind_max], round(timeNS[NS_ind_min],11), voltage_NS[NS_ind_min],
+                                    round(timevert[vert_ind_max],11), voltage_vert[vert_ind_max], round(timevert[vert_ind_min],11), voltage_vert[vert_ind_min],
+                                    round(timeEW[com_ind_max],11), voltage_com[com_ind_max], round(timeEW[com_ind_min],11), voltage_com[com_ind_min] )  )
 
 ############### end of loop over antennas
     if opt_input=='json': 
@@ -716,7 +728,7 @@ if __name__ == '__main__':
         injection_height = float(sys.argv[8]) #m above sea level
         json_file = None
 
-    print 'shower = ',zenith_sim,azimuth_sim,energy
+    #print 'shower = ',zenith_sim,azimuth_sim,energy
     print "VOLTAGE COMPUTATION STARTED"
 
     compute(opt_input,path, effective, zenith_sim, azimuth_sim, energy, injection_height, primary,json_file)
