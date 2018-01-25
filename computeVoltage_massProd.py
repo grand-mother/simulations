@@ -3,10 +3,8 @@ import os
 from os.path import  join
 import sys
 import numpy as np
-import pylab as pl
+#import pylab as pl
 
-#sys.path.append('/Users/nrenault/Desktop/GRAND/retro-master/lib/python/')
-#wkdir = '/Users/nrenault/Desktop/GRAND/scripts_clean/'
 wkdir = './'
 
 import linecache
@@ -128,8 +126,11 @@ def get_voltage(time1, Ex, Ey, Ez, ush=[1, 0, 0], alpha=0, beta=0, typ="X"):
     # Compute effective theta, phi in antenna tilted frame (taking slope into account, with x=SN)
     ushp = TopoToAntenna(ush,alpha,beta)  # Xmax vector in antenna frame
     zen=np.arccos(ushp[2])*180/np.pi  # Zenith in antenna frame
-    azim=np.arccos(ushp[0])*180/np.pi
-    print ush, alpha, beta
+    if np.linalg.norm(ushp[0:2])==0:  # No component in plane
+        azim = 0
+    else:
+        azim=np.arccos(ushp[0]/np.linalg.norm(ushp[0:2]))*180/np.pi
+    #print ush, ushp, alpha, beta
     if typ=='X':
         print "Zenith & azimuth in antenna framework:",zen, azim
     if zen>90:
@@ -151,11 +152,6 @@ def get_voltage(time1, Ex, Ey, Ez, ush=[1, 0, 0], alpha=0, beta=0, typ="X"):
     amplituder = szen*(caz*Exp+saz*Eyp)+czen*Ezp
     amplitudet = -czen*(caz*Exp+saz*Eyp)-szen*Ezp  #To be checked!... Inverted polarity?
     amplitudep = saz*Exp-caz*Eyp
-
-    pl.figure(12)
-    pl.plot(amplituder)
-    pl.plot(amplitudet)
-    pl.plot(amplitudep)
 
     ##################################
     ### all the settings for the 3 different antenna arms:
@@ -282,79 +278,6 @@ def get_voltage(time1, Ex, Ey, Ez, ush=[1, 0, 0], alpha=0, beta=0, typ="X"):
 
     return(voltage, timet+timeoff)
 
-# #===========================================================================================================
-# def effective_zenith(zen, azim, alpha, x_ant, y_ant, z_ant, x_xmax=0, y_xmax=0, z_xmax=3000.):
-# #===========================================================================================================
-#     # Effective zenith (computed in GRAND conventions, ie theta>90deg <=> downward)
-#     zen = np.deg2rad(zen)
-#     azim = np.deg2rad(azim)
-#     alpha = np.deg2rad(alpha)
-#
-#     #print "input zen, azim, alpha : ", np.rad2deg(zen), np.rad2deg(azim), np.rad2deg(alpha)
-#
-#     #print 'Now computing effective zenith angle to Xmax from antenna location.'
-#
-#     # shower direction: where it goes to
-#     v = np.array([np.cos(azim)*np.sin(zen), np.sin(azim)*np.sin(zen), np.cos(zen)]) # or *-1: change the direction
-#     # vector for zenith=90
-#     b = np.array([np.cos(azim), np.sin(azim) ,0.])
-#     # projection v onto b
-#     v_p= np.linalg.norm(v)* np.cos(0.5*np.pi-zen) *b/np.linalg.norm(b)
-#     v_p /=np.linalg.norm(v_p)
-#
-#     Xmax= np.array([x_xmax,y_xmax,z_xmax])
-#     #print 'Xmax position:',Xmax
-#     #print(v, Xmax)
-#
-#     ant= np.array([x_ant, y_ant, z_ant])  # antenna position
-#     # unit vetor between xmax and antenna
-#     u_xmax =  Xmax - ant
-#     u_xmax = u_xmax/np.linalg.norm(u_xmax)
-#     #print u_xmax
-#
-#     # antenna vector
-#     # at the moment slope always facing the shower => azim_ant = 180. -azim, mountain slope alpha works as zenith
-#     u_ant= np.array([ np.cos(np.pi-azim)* np.sin(alpha),  np.sin(np.pi-azim)* np.sin(alpha), np.cos(alpha)])
-#     #print(u_ant)
-#
-#     # get     [Exp,Eyp,Ezp] = TopoToAntenna(Etot,alpha,beta) zenith, the angle between antenna vector and vector between xmax and antenna
-#     cos_zen_eff= np.dot(u_xmax, u_ant)
-#     zen_eff=  np.arccos(cos_zen_eff)
-#     zen_eff = 180-np.rad2deg(zen_eff)
-#
-#     return zen_eff
-#
-# #===========================================================================================================
-# def effective_angles(alpha, beta, x_ant, y_ant, z_ant, x_xmax=0, y_xmax=0, z_xmax=3000.):
-# #===========================================================================================================
-#     #the following replace the lines above, output is angles already in NEC convention
-#     #it calculates zenith and azimuth angles of Xmax in the antenna frame (where antenna wood pole is along the z axis)
-#     def TopoToAntenna(x,y,z,xant,yant,zant,alpha,beta): #from coordinates in the topography frame to coordinates in the antenna frame
-#         xp=x-xant
-#         yp=y-yant
-#         zp=z-zant
-#         alpha=alpha*np.pi/180 #around y=theta
-#         beta=beta*np.pi/180 #around z=phi
-#         cb = np.cos(beta)
-#         sb = np.sin(beta)
-#         ca = np.cos(alpha)
-#         sa = np.sin(alpha)
-#         rotzy = np.array([[ca*cb,-ca*sb,sa],[sb,cb,0],[-sa*cb,sa*sb,ca]])  #Ry(alpha)*Rz(beta)
-#         rotxy = np.array([[ca,sa*sb,sa*cb],[0,cb,-sb],[-sa,ca*sb,ca*cb]])  #Ry(alpha)*Rx(beta)
-#         [xpp,ypp,zpp] = rotzy.dot([xp,yp,zp])
-#         print xpp,ypp,zpp
-#
-#         return xpp,ypp,zpp
-#
-#     xmax_inant=TopoToAntenna(x_xmax, y_xmax, z_xmax, x_ant, y_ant, z_ant, alpha, beta)
-#     xmax_inant=xmax_inant/np.linalg.norm(xmax_inant)
-#     zen_inant=np.arccos(xmax_inant[2])
-#     azim_inant=np.arccos(xmax_inant[1])*180/np.pi
-#     zen_inant=zen_inant*180/np.pi
-#
-#     zen_inant,azim_inant = NECtoGRAND(zen_inant, azim_inant)
-#
-#     return zen_inant,azim_inant
 
 #===========================================================================================================
 def inputfromjson(path,json_file):
@@ -542,7 +465,6 @@ def compute(opt_input,path, effective,zenith_sim, azimuth_sim, energy, injection
     ###### loop  over l --- LOOP OVER ANTENNA ARRAY
     for l in range(start,end):
         efieldtxt=path+'/a'+str(l)+'.trace'
-
     #    print 'Wave direction: zenith = ', zenith_sim, ' deg, azimuth = ', azimuth_sim, 'deg. (GRAND conventions), mountain slope: ', alpha_sim, 'deg.'
     #    print 'Efield file: ', efieldtxt
 
@@ -598,7 +520,7 @@ def compute(opt_input,path, effective,zenith_sim, azimuth_sim, energy, injection
 
             # Finally compute effective zenith
             #alpha_sim = 0.
- 	    # Hack OMH 24/01
+ 	    # # Hack OMH 24/01
 	    alpha_sim=10
 	    beta_sim=0
         Xant = [x_sim, y_sim, z_sim]
@@ -708,7 +630,9 @@ if __name__ == '__main__':
 
         if manual input:
             python computevoltage.py [input option] [effective 0/1] [path to traces] [primary] [zenith] [azimuth] [energy in EeV] [injection height above sea level in m] [opt: antenna ID] [opt: antenna x,y,z,alpha,beta]
-            example: python computevoltage.py manual 0/1 ./ proton 85 205 0.5 1500 7 100 100 1000 10 5
+            example: python computeVoltage_massProd.py manual 0/1 ./ proton 85 205 0.5 1500 7 100 100 1000 10 5
+            example: python computeVoltage_massProd.py txt 1 ./split/ ./ZhairesShower.inp
+
         """
         ## -> computes voltage traces for EW, NS and Vertical antenna component and saves the voltage traces in out_'.txt (same folder as a'.trace)
         ## -> produces a new json file with copying the original one, but saves as well additional informations as p2p-voltages, and peak times and values in *.voltage.json in the same folder as the original json file
