@@ -16,7 +16,7 @@ zant=np.zeros(len(xant))
 
 #loop on all antennas to calculate z, alpha (zenith) and beta (azimuth) angles
 for i in range(len(zant)):
-    zant[i]=topo.ground_altitude(xant[i],yant[i])
+    zant[i]=topo.ground_altitude(xant[i],yant[i]):q
     zdeltadx=topo.ground_altitude(xant[i]+deltad,yant[i])
     zdeltady=topo.ground_altitude(xant[i],yant[i]+deltad)
     u=[deltad, 0, zdeltadx-zant[i]]
