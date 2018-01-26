@@ -126,10 +126,11 @@ def get_voltage(time1, Ex, Ey, Ez, ush=[1, 0, 0], alpha=0, beta=0, typ="X"):
     # Compute effective theta, phi in antenna tilted frame (taking slope into account, with x=SN)
     ushp = TopoToAntenna(ush,alpha,beta)  # Xmax vector in antenna frame
     zen=np.arccos(ushp[2])*180/np.pi  # Zenith in antenna frame
-    if np.linalg.norm(ushp[0:2])==0:  # No component in plane
-        azim = 0
-    else:
-        azim=np.arccos(ushp[0]/np.linalg.norm(ushp[0:2]))*180/np.pi
+    #if np.linalg.norm(ushp[0:2])==0:  # No component in plane
+        #azim = 0
+    #else:
+        #azim=np.arccos(ushp[0]/np.linalg.norm(ushp[0:2]))*180/np.pi
+    azim = np.degrees(np.arctan2(ushp[1],ushp[0])) # from VN email 26.01.2018
     #print ush, ushp, alpha, beta
     if typ=='X':
         print "Zenith & azimuth in antenna framework:",zen, azim
