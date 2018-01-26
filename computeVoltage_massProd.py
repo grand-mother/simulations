@@ -519,10 +519,7 @@ def compute(opt_input,path, effective,zenith_sim, azimuth_sim, energy, injection
                     sys.exit()
 
             # Finally compute effective zenith
-            #alpha_sim = 0.
- 	    # # Hack OMH 24/01
-	    alpha_sim=10
-	    beta_sim=0
+
         Xant = [x_sim, y_sim, z_sim]
         ush = Xmax-Xant
         ush = ush/np.linalg.norm(ush)  # Unitary vector pointing to Xmax from antenna pos
