@@ -83,12 +83,12 @@ def get_voltage(time1, Ex, Ey, Ez, ush=[1, 0, 0], alpha=0, beta=0, typ="X"):
         #roty = np.linalg.inv(roty)  # Not to be used since y is facing backwards in (x,y,z)
         rotz = np.array([[cb,-sb,0],[sb,cb,0],[0,0,1]])
         rotz = np.linalg.inv(rotz)
-        rotyz=roty.dot(rotz)  # beta and then alpha rotation. This induces a EW component for x arm
+        rotyz=roty.dot(rotz)  # beta (along z) and then alpha (along y) rotation. This induces an EW component for x arm
 
         # Now rotate along zp so that we are back with x along NS
         xarm = [1,0,0]  #Xarm
         xarmp = rotyz.dot(xarm)  # Rotate Xarm along slope
-        # Compute antrot, angle vs NS, and then rotate back along NS (angle = -antrot)
+        # Compute antrot, angle vs NS, and then rotate back along NS
         antrot = math.atan2(xarmp[1],xarmp[0])*180/np.pi
         #print "antrot = ",antrot
         cz = np.cos(antrot*np.pi/180)
