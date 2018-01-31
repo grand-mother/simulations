@@ -83,12 +83,12 @@ def get_voltage(time1, Ex, Ey, Ez, ush=[1, 0, 0], alpha=0, beta=0, typ="X"):
         #roty = np.linalg.inv(roty)  # Not to be used since y is facing backwards in (x,y,z)
         rotz = np.array([[cb,-sb,0],[sb,cb,0],[0,0,1]])
         rotz = np.linalg.inv(rotz)
-        rotyz=roty.dot(rotz)  # beta (along z) and then alpha (along y) rotation. This induces an EW component for x arm
+        rotyz=roty.dot(rotz)  # beta and then alpha rotation. This induces a EW component for x arm
 
         # Now rotate along zp so that we are back with x along NS
         xarm = [1,0,0]  #Xarm
         xarmp = rotyz.dot(xarm)  # Rotate Xarm along slope
-        # Compute antrot, angle vs NS, and then rotate back along NS
+        # Compute antrot, angle vs NS, and then rotate back along NS (angle = -antrot)
         antrot = math.atan2(xarmp[1],xarmp[0])*180/np.pi
         #print "antrot = ",antrot
         cz = np.cos(antrot*np.pi/180)
@@ -157,8 +157,7 @@ def get_voltage(time1, Ex, Ey, Ez, ush=[1, 0, 0], alpha=0, beta=0, typ="X"):
     # alpha()
 
     if typ=='X':
-       pass
-       #print "Zenith & azimuth in antenna framework:",zen, azim
+        print "Zenith & azimuth in antenna framework:",zen, azim
     if zen>90:
         print "Signal originates below antenna horizon! No antenna response computed. Abort."
         return([],[])
@@ -435,12 +434,7 @@ def compute(opt_input,path, effective,zenith_sim, azimuth_sim, energy, injection
             showerID = str(path.split('/')[-2])
         # Find that shower in the json file
         event = [evt for evt in EventIterator(json_file) if evt["tag"]==showerID][0]
-        ### json file containing additional data for analysis
-        filename = str(showerID) + ".voltage.json"
-        path2 = join(path_json, filename)
-        print path2
-        log_event = EventLogger(path=path2)
-
+        log_event = EventLogger(path=json_file)
 
     voltage=[]
     time_peaks=[]
@@ -449,21 +443,21 @@ def compute(opt_input,path, effective,zenith_sim, azimuth_sim, energy, injection
     ##########################################################################################
     ###Handing over one antenna or a whole array
     if opt_input=='txt':
-        if len(sys.argv)>=7: # just one specif antenna handed over
-            start=int(sys.argv[6]) # antenna ID
+        if len(sys.argv)>=6: # just one specif antenna handed over
+            start=int(sys.argv[5]) # antenna ID
             end=start+1
         #    print "single antenna with ID: ", str(start)," handed over"
-        if  len(sys.argv)<7: # grep all antennas from the antenna file
+        if  len(sys.argv)<6: # grep all antennas from the antenna file
             positions=np.genfromtxt(path+'/antpos.dat')
             start=0
             end=len(positions)
         #    print "Array with ", end, " antennas handed over"
     elif opt_input=='json':
-        if len(sys.argv)>=7: # just one specif antenna handed over
-            start=int(sys.argv[6]) # antenna ID
+        if len(sys.argv)>=6: # just one specif antenna handed over
+            start=int(sys.argv[5]) # antenna ID
             end=start+1
         #    print "single antenna with ID: ", str(start)," handed over"
-        if  len(sys.argv)<7: # grep all antennas from the antenna file
+        if  len(sys.argv)<6: # grep all antennas from the antenna file
             positions=np.array(event["antennas"],dtype=float)
             decay_pos=event["tau_at_decay"][1]
             positions = positions - [decay_pos[0],decay_pos[1],0.]
@@ -472,11 +466,11 @@ def compute(opt_input,path, effective,zenith_sim, azimuth_sim, energy, injection
             end=len(positions)
             #print "Array with ", end, " antennas handed over"
     elif opt_input=='manual':
-        if len(sys.argv)>=11: # just one specif antenna handed over
-            start=int(sys.argv[10]) # antenna ID
+        if len(sys.argv)>=10: # just one specif antenna handed over
+            start=int(sys.argv[9]) # antenna ID
             end=start+1
         #    print "single antenna with ID: ", str(start)," handed over"
-        if  len(sys.argv)<11: # grep all antennas from the antenna file
+        if  len(sys.argv)<10: # grep all antennas from the antenna file
             positions=np.genfromtxt(path+'/antpos.dat')
             start=0
             end=len(positions)
@@ -506,7 +500,7 @@ def compute(opt_input,path, effective,zenith_sim, azimuth_sim, energy, injection
         try:
             time1_sim, Ex_sim, Ey_sim,Ez_sim = np.loadtxt(efieldtxt,delimiter=' ',usecols=(0,1,2,3),unpack=True)
         except IOError:
-            continue #jlzhang if the file and the path is not exist, if will go to next antenna, so I think it should be break;
+            continue
 
         # NOTE: adapt to your time from whatever to s
         time1_sim= time1_sim*1e-9 # time has to be handed in s
@@ -518,23 +512,23 @@ def compute(opt_input,path, effective,zenith_sim, azimuth_sim, energy, injection
             # First get antenna position
 
             #print 'Reading antenna position from parameter input.'
-            if (opt_input=='json' or opt_input=='txt') and (len(sys.argv)==12) :
-                    x_sim = float(sys.argv[7])
-                    y_sim = float(sys.argv[8])
-                    z_sim = float(sys.argv[9])
+            if (opt_input=='json' or opt_input=='txt') and (len(sys.argv)==11) :
+                    x_sim = float(sys.argv[6])
+                    y_sim = float(sys.argv[7])
+                    z_sim = float(sys.argv[8])
 
                     # include a mountain slope - correction of zenith angle
-                    alpha_sim=float(sys.argv[10])
-                    beta_sim=float(sys.argv[11])
+                    alpha_sim=float(sys.argv[9])
+                    beta_sim=float(sys.argv[10])
 
-            elif (opt_input=='manual') and (len(sys.argv)==16) :
-                    x_sim = float(sys.argv[11])
-                    y_sim = float(sys.argv[12])
-                    z_sim = float(sys.argv[13])
+            elif (opt_input=='manual') and (len(sys.argv)==15) :
+                    x_sim = float(sys.argv[10])
+                    y_sim = float(sys.argv[11])
+                    z_sim = float(sys.argv[12])
 
                     # include a mountain slope - correction of zenith angle
-                    alpha_sim=float(sys.argv[14])
-                    beta_sim=float(sys.argv[15])
+                    alpha_sim=float(sys.argv[13])
+                    beta_sim=float(sys.argv[14])
             else :
                 try :
                     if opt_input=='json':
@@ -554,9 +548,9 @@ def compute(opt_input,path, effective,zenith_sim, azimuth_sim, energy, injection
 
         Xant = [x_sim, y_sim, z_sim]
  	# Hack OMH 24/01
-	alpha_sim=10
-	beta_sim=0
-        Xant = [400000, 0 , 0]
+	#alpha_sim=10
+	#beta_sim=0
+        #Xant = [400000, 0 , 0]
         ush = Xmax-Xant
         ush = ush/np.linalg.norm(ush)  # Unitary vector pointing to Xmax from antenna pos
         voltage_NS, timeNS  = get_voltage( time1=time1_sim,Ex=Ex_sim, Ey=Ey_sim, Ez=Ez_sim, ush=ush, alpha=alpha_sim, beta=beta_sim, typ="X")
@@ -565,14 +559,14 @@ def compute(opt_input,path, effective,zenith_sim, azimuth_sim, energy, injection
 
         #pl.savetxt(path+'out_'+str(l)+'.txt', (timeEW, voltage_EW, voltage_NS), newline='\r\n')#, voltage_NS)) # is not working correctly
         if np.size(timeEW)>0:   # Dat was computed
-          f = file(pathout+'/out_'+str(l)+'.txt',"w")
-          #print "OUTFILE : ", pathout+'/out_'+str(l)+'.txt'
+          f = file(path+'/out_'+str(l)+'.txt',"w")
+          print "OUTFILE : ", path+'/out_'+str(l)+'.txt'
           for i in np.arange(len(timeEW)):
             print >>f,"%1.5e	%1.2e	%1.2e	%1.2e" % (timeNS[i], voltage_NS[i], voltage_EW[i], voltage_vert[i] ) # same number of digits as input
           f.close()
 
         ###plots
-        DISPLAY=1
+        DISPLAY=0
         if DISPLAY==1:
             import pylab as pl
             import matplotlib.pyplot as plt
@@ -602,7 +596,7 @@ def compute(opt_input,path, effective,zenith_sim, azimuth_sim, energy, injection
             voltage_com=np.copy(voltage_EW)
             for i in range (0, len(voltage_EW)):
                                 voltage_com[i]+=voltage_NS[i]
-            v_list =( str(l),  max(voltage_EW) - min(voltage_EW), max(voltage_NS) - min(voltage_NS), max(voltage_vert) - min(voltage_vert), max(voltage_com) - min(voltage_com)   ) #jlzhang zen>90, so there is no voltage, the max() will be empty
+            v_list =( str(l),  max(voltage_EW) - min(voltage_EW), max(voltage_NS) - min(voltage_NS), max(voltage_vert) - min(voltage_vert), max(voltage_com) - min(voltage_com)   )
             voltage.append( v_list )
 
             # time of peaks and value: t_EW_max, v_EW_max, t_EW_min, v_EW_min,.... EW, NS, vert, EW+NS
@@ -645,17 +639,17 @@ def compute(opt_input,path, effective,zenith_sim, azimuth_sim, energy, injection
 #===========================================================================================================
 if __name__ == '__main__':
 
-    if len(sys.argv)<6:
+    if len(sys.argv)<5:
         print """\
         Wrong minimum number of arguments. All angles are to be expressed in degrees and in GRAND convention.
         Usage:
         if json file or ZHAireS inp file input:
-            python computevoltage.py [input option] [effective 0/1] [path to traces] [path to voltages] [json file/inp file] [opt: antenna ID] [opt: antenna x,y,z,alpha,beta]
-            example: python computevoltage.py json/txt 0/1 ./ ./ ../Danton/*.json 7 100 100 1000 10 5
+            python computevoltage.py [input option] [effective 0/1] [path to traces] [json file/inp file] [opt: antenna ID] [opt: antenna x,y,z,alpha,beta]
+            example: python computevoltage.py json/txt 0/1 ./ ../Danton/*.json 7 100 100 1000 10 5
 
         if manual input:
-            python computevoltage.py [input option] [effective 0/1] [path to traces] [path to voltages] [primary] [zenith] [azimuth] [energy in EeV] [injection height above sea level in m] [opt: antenna ID] [opt: antenna x,y,z,alpha,beta]
-            example: python computeVoltage_massProd.py manual 0/1 ./ ./ proton 85 205 0.5 1500 7 100 100 1000 10 5
+            python computevoltage.py [input option] [effective 0/1] [path to traces] [primary] [zenith] [azimuth] [energy in EeV] [injection height above sea level in m] [opt: antenna ID] [opt: antenna x,y,z,alpha,beta]
+            example: python computeVoltage_massProd.py manual 0/1 ./ proton 85 205 0.5 1500 7 100 100 1000 10 5
             example: python computeVoltage_massProd.py txt 1 ./split/ ./ZhairesShower.inp
 
         """
@@ -675,26 +669,24 @@ if __name__ == '__main__':
 
     # which efield trace do you wanna read in. to be consistent the script works with the antenna ID
     path=sys.argv[3] #folder containing the traces and where the output should go to
-    pathout=sys.argv[4] #folder where the output should go to
 
     if opt_input=='txt':
         # Read the ZHAireS input (.inp) file to extract the primary type, the energy, the injection height and the direction
-        inp_file = str(sys.argv[5])
+        inp_file = str(sys.argv[4])
         zenith_sim,azimuth_sim,energy,injection_height,primary = inputfromtxt(inp_file)
         json_file = None
 
     elif opt_input=='json':
         # Read the json file to extract the primary type, the energy, the injection height, and the direction
-        json_file = str(sys.argv[5])
-	path_json = os.path.dirname(json_file)
+        json_file = str(sys.argv[4])
         zenith_sim,azimuth_sim,energy,injection_height,primary = inputfromjson(path,json_file)
 
     elif opt_input=='manual':
-        primary = str(sys.argv[5])
-        zenith_sim = float(sys.argv[6]) #deg
-        azimuth_sim = float(sys.argv[7]) #deg
-        energy = float(sys.argv[8]) #EeV
-        injection_height = float(sys.argv[9]) #m above sea level
+        primary = str(sys.argv[4])
+        zenith_sim = float(sys.argv[5]) #deg
+        azimuth_sim = float(sys.argv[6]) #deg
+        energy = float(sys.argv[7]) #EeV
+        injection_height = float(sys.argv[8]) #m above sea level
         json_file = None
 
     #print 'shower = ',zenith_sim,azimuth_sim,energy
