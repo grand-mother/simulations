@@ -30,9 +30,10 @@ XLp=XLp*100
 fr=np.arange(20,301,5)
 
 # Load antenna response files
-fileleff_x=wkdir+'HorizonAntenna_SNarm_leff_loaded.npy' # 'HorizonAntenna_leff_notloaded.npy' if loaded=0, EW component, used for NS
-fileleff_y=wkdir+'HorizonAntenna_EWarm_leff_loaded.npy' # 'HorizonAntenna_leff_notloaded.npy' if loaded=0, EW component, used for EW
-fileleff_z=wkdir+'HorizonAntenna_Zarm_leff_loaded.npy' # 'HorizonAntenna_leff_notloaded.npy' if loaded=0, EW component, used for vert
+#fileleff_x=wkdir+'HorizonAntenna_leff_loaded.npy' # 'HorizonAntenna_leff_notloaded.npy' if loaded=0, NS component
+fileleff_x=wkdir+'HorizonAntenna_SNarm_leff_loaded.npy' # 'HorizonAntenna_leff_notloaded.npy' if loaded=0, NS component
+fileleff_y=wkdir+'HorizonAntenna_EWarm_leff_loaded.npy' # 'HorizonAntenna_leff_notloaded.npy' if loaded=0, EW component
+fileleff_z=wkdir+'HorizonAntenna_Zarm_leff_loaded.npy' # 'HorizonAntenna_leff_notloaded.npy' if loaded=0, Vert component
 freq1,realimp1,reactance1,theta1,phi1,lefftheta1,leffphi1,phasetheta1,phasephi1=np.load(fileleff_x) ### this line cost 6-7s
 RL1=interp1d(fr, RLp, bounds_error=False, fill_value=0.0)(freq1[:,0])
 XL1=interp1d(fr, XLp, bounds_error=False, fill_value=0.0)(freq1[:,0])
@@ -80,17 +81,17 @@ def get_voltage(time1, Ex, Ey, Ez, ush=[1, 0, 0], alpha=0, beta=0, typ="X"):
         # rotx = np.array([[1,0,0],[0,cb,-sb],[0,sb,cb]])
         # rotx = np.linalg.inv(rotx)  # Referential rotates ==> use inverse matrix
         roty = np.array([[ca,0,sa],[0,1,0],[-sa,0,ca]])
-        #roty = np.linalg.inv(roty)  # Not to be used since y is facing backwards in (x,y,z)
+        roty = np.linalg.inv(roty)  # Since we rotate referential, inverse transformation should be applied
         rotz = np.array([[cb,-sb,0],[sb,cb,0],[0,0,1]])
-        rotz = np.linalg.inv(rotz)
+        rotz = np.linalg.inv(rotz) # Since we rotate referential, inverse transformation should be applied
         rotyz=roty.dot(rotz)  # beta and then alpha rotation. This induces a EW component for x arm
 
         # Now rotate along zp so that we are back with x along NS
         xarm = [1,0,0]  #Xarm
         xarmp = rotyz.dot(xarm)  # Rotate Xarm along slope
-        # Compute antrot, angle vs NS, and then rotate back along NS (angle = -antrot)
+        # Compute antrot, angle of NS direction in antenna ref = angle to turn Xarm back to North
         antrot = math.atan2(xarmp[1],xarmp[0])*180/np.pi
-        #print "antrot = ",antrot
+        #print "antrot=",antrot
         cz = np.cos(antrot*np.pi/180)
         sz = np.sin(antrot*np.pi/180)
         rotzant = np.array([[cz,-sz,0],[sz,cz,0],[0,0,1]])
@@ -403,7 +404,7 @@ def inputfromtxt(input_file_path):
     except NameError:
         primarytype = None
 
-    energy = energy *1e-18
+    #energy = energy *1e-18
 
     if primarytype=='RASPASSMulti':
         tmp = RASPASSMulti_line.split(' ',-1)
@@ -476,19 +477,19 @@ def compute(opt_input,path, effective,zenith_sim, azimuth_sim, energy, injection
             end=len(positions)
         #    print "Array with ", end, " antennas handed over"
 
-    if effective==1: # effective zenith caclculation needs Xmax position as input
+    if effective==1: # effective zenith calculation needs Xmax position as input
     #    print "effective zenith calculated - Xmax position approximated ..."
         # Then compute Xmax
         caz = np.cos(np.deg2rad(azimuth_sim))
         saz = np.sin(np.deg2rad(azimuth_sim))
         czen = np.cos(np.deg2rad(zenith_sim))
         szen = np.sin(np.deg2rad(zenith_sim))
-
         Xmax_primary = modules._getXmax(primary, energy, np.deg2rad(zenith_sim)) # approximation based on values from plots for gamma (=e) and protons (=pi) # g/cm2
         Xmax_height, Xmax_distance = modules._dist_decay_Xmax(np.deg2rad(zenith_sim), injection_height, Xmax_primary) # d_prime: distance from decay point to Xmax
-        Xmax = Xmax_distance*np.array([caz*szen, saz*szen, czen])+np.array([0,0,injection_height])
-    #   print 'Xmax=',Xmax_primary,' Xmax height=',Xmax_height,' Xmax distance =',Xmax_distance,'Xmax position= ',Xmax
-    #   print 'Now computing Xmax position from injection height=',injection_height,'m and (zen,azim) values.'
+	Xmax = np.array([0,0,injection_height])+Xmax_distance*np.array([caz*szen, saz*szen, czen])
+	#print [0,0,injection_height],Xmax_distance*np.array([caz*szen, saz*szen, czen]),Xmax
+        print 'Xmax=',Xmax_primary,' Xmax height=',Xmax_height,' Xmax distance =',Xmax_distance,'Xmax position= ',Xmax
+        print 'Now computing Xmax position from injection height=',injection_height,'m and (zen,azim) values',zenith_sim,azimuth_sim
 
     ###### loop  over l --- LOOP OVER ANTENNA ARRAY
     for l in range(start,end):
@@ -539,7 +540,7 @@ def compute(opt_input,path, effective,zenith_sim, azimuth_sim, energy, injection
                         #print 'Trying to read antenna position from antpos.dat file...'
                         numberline = int(l) + 1
                         line = linecache.getline(path+'/antpos.dat', numberline)
-                        #[x_sim, y_sim, z_sim] = map(float, line.split())
+			            #[x_sim, y_sim, z_sim] = map(float, line.split())
                         [x_sim, y_sim, z_sim, alpha_sim, beta_sim] = map(float, line.split())
                     #print 'Read antenna position from antpos.dat file... Antenna',l,' at position [', x_sim, y_sim, z_sim,'].'
                 except :
@@ -548,9 +549,11 @@ def compute(opt_input,path, effective,zenith_sim, azimuth_sim, energy, injection
 
         Xant = [x_sim, y_sim, z_sim]
  	# Hack OMH 24/01
-	#alpha_sim=10
-	#beta_sim=0
-        #Xant = [400000, 0 , 0]
+	# alpha_sim=10
+	# beta_sim=10
+	# Xant = [x_sim, y_sim, 0]
+ 	# Xant = [40000,0 , 0]
+	#print "Xant, Xmax:",Xant,Xmax
         ush = Xmax-Xant
         ush = ush/np.linalg.norm(ush)  # Unitary vector pointing to Xmax from antenna pos
         voltage_NS, timeNS  = get_voltage( time1=time1_sim,Ex=Ex_sim, Ey=Ey_sim, Ez=Ez_sim, ush=ush, alpha=alpha_sim, beta=beta_sim, typ="X")
@@ -566,7 +569,7 @@ def compute(opt_input,path, effective,zenith_sim, azimuth_sim, energy, injection
           f.close()
 
         ###plots
-        DISPLAY=0
+        DISPLAY=1
         if DISPLAY==1:
             import pylab as pl
             import matplotlib.pyplot as plt

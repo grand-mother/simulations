@@ -31,7 +31,8 @@ XLp=XLp*100
 fr=np.arange(20,301,5)
 
 ##### antenna response file horizontal
-fileleff=wkdir+'HorizonAntenna_leff_loaded.npy' # 'HorizonAntenna_leff_notloaded.npy' if loaded=0, EW component, used as well for NS
+#fileleff=wkdir+'HorizonAntenna_leff_loaded.npy' # 'HorizonAntenna_leff_notloaded.npy' if loaded=0, EW component, used as well for NS
+fileleff=wkdir+'HorizonAntenna_EWarm_leff_loaded.npy' # 'HorizonAntenna_leff_notloaded.npy' if loaded=0, EW component, used as well for NS
 freq1,realimp1,reactance1,theta1,phi1,lefftheta1,leffphi1,phasetheta1,phasephi1=np.load(fileleff) ### this line cost 6-7s
 
 ######For this three lines it already needs several s
