@@ -190,10 +190,15 @@ def get_voltage(time1, Ex, Ey, Ez, ush=[1, 0, 0], alpha=0, beta=0, typ="X"):
     f=np.zeros(nfreq)
     RA=np.zeros(nfreq)
     XA=np.zeros(nfreq)
-    ltr=np.zeros(nfreq)
-    lta=np.zeros(nfreq)
-    lpr=np.zeros(nfreq)
-    lpa=np.zeros(nfreq)
+    ltr1=np.zeros(nfreq)
+    lta1=np.zeros(nfreq)
+    lpr1=np.zeros(nfreq)
+    lpa1=np.zeros(nfreq)
+    ltr2=np.zeros(nfreq)
+    lta2=np.zeros(nfreq)
+    lpr2=np.zeros(nfreq)
+    lpa2=np.zeros(nfreq)
+    
     if azstep==5:
         roundazimuth=round(azim/10)*10+round((azim-10*round(azim/10))/5)*5
     elif azstep==1:
@@ -208,16 +213,43 @@ def get_voltage(time1, Ex, Ey, Ez, ush=[1, 0, 0], alpha=0, beta=0, typ="X"):
     if roundazimuth>=271 and roundazimuth<=360:
         roundazimuth=360-roundazimuth
 
-    for i in range(nfreq):
+
+    for i in range(nfreq):   # Using interpolation for every angle
         f[i]=freq[i,0]*freqscale
-        indtheta=np.nonzero(theta[i,:]==round(zen))[0]
+        indtheta=np.nonzero(theta[i,:]==int(zen))[0]
         indphi=np.nonzero(phi[i,:]==roundazimuth)[0]
         indcom=np.intersect1d(indtheta,indphi)
-        ltr[i]=lefftheta[i,indcom]
-       	lta[i]=np.deg2rad(phasetheta[i,indcom]) #*np.pi/180
-       	lpr[i]=leffphi[i,indcom]
-       	lpa[i]=np.deg2rad(phasephi[i,indcom]) #*np.pi/180
-        if loaded==0:
+        ltr1[i]=lefftheta[i,indcom]
+        lta1[i]=np.deg2rad(phasetheta[i,indcom]) #*np.pi/180
+        lpr1[i]=leffphi[i,indcom]
+        lpa1[i]=np.deg2rad(phasephi[i,indcom]) #*np.pi/180
+        indtheta=np.nonzero(theta[i,:]==int(zen)+1)[0]
+        indphi=np.nonzero(phi[i,:]==roundazimuth)[0]
+        indcom=np.intersect1d(indtheta,indphi)
+        ltr2[i]=lefftheta[i,indcom]
+        lta2[i]=np.deg2rad(phasetheta[i,indcom]) #*np.pi/180
+        lpr2[i]=leffphi[i,indcom]
+        lpa2[i]=np.deg2rad(phasephi[i,indcom]) #*np.pi/180
+
+	ltr=interp1d([int(zen),int(zen)+1],np.transpose([ltr1,ltr2]))(zen)
+	lta=interp1d([int(zen),int(zen)+1],np.transpose([lta1,lta2]))(zen)
+	lpr=interp1d([int(zen),int(zen)+1],np.transpose([lpr1,lpr2]))(zen)
+	lpa=interp1d([int(zen),int(zen)+1],np.transpose([lpa1,lpa2]))(zen)
+
+    
+    '''
+    for i in range(nfreq): # No interpolation 
+   	   f[i]=freq[i,0]*freqscale
+   	   indtheta=np.nonzero(theta[i,:]==round(zen))[0]
+   	   indphi=np.nonzero(phi[i,:]==roundazimuth)[0]
+   	   indcom=np.intersect1d(indtheta,indphi)
+   	   ltr[i]=lefftheta[i,indcom]
+   	   lta[i]=np.deg2rad(phasetheta[i,indcom]) #*np.pi/180
+   	   lpr[i]=leffphi[i,indcom]
+   	   lpa[i]=np.deg2rad(phasephi[i,indcom]) #*np.pi/180
+    ''' 	
+	
+    if loaded==0:
             RA[i]=realimp[i,0]
             XA[i]=reactance[i,0]
             Rlefft=ltr[i]*np.cos(lta[i])
@@ -320,16 +352,19 @@ def inputfromjson(path,json_file):
     event = [evt for evt in EventIterator(json_file) if evt["tag"]==showerID][0]
 
     ### DECAY
-    decay_pos=event["tau_at_decay"][1]
-    #print "decay position: ", decay_pos
+    decay_pos=event["tau_at_decay"][2]
+    # if decay_pos[2]<0:
+    #     decay_pos[2] = 100
+    print "decay position: ", decay_pos
     injection_height=decay_pos[2]
+
     decay_pos=decay_pos+np.array([0.,0.,EARTH_RADIUS]) # corrected for earth radius
     #print "decay position after correction: ", decay_pos
     decay_altitude=event["tau_at_decay"][3]
     #print "decay decay_altitude: ", decay_altitude
 
     ### ANGLES
-    v=event["tau_at_decay"][2]# shower direction, assuming decay products strongly forward beamed
+    v=event["tau_at_decay"][3]# shower direction, assuming decay products strongly forward beamed
     zenith_sim = np.degrees(np.arccos(np.dot(v, decay_pos) / np.linalg.norm(decay_pos))) # zenith in GRAND conv.
     #print "theta: ", zenith_sim
     #orthogonal projection of v onto flat plane to get the azimuth
@@ -457,7 +492,7 @@ def compute(opt_input,path, effective,zenith_sim, azimuth_sim, energy, injection
         if len(sys.argv)>=6: # just one specif antenna handed over
             start=int(sys.argv[5]) # antenna ID
             end=start+1
-        #    print "single antenna with ID: ", str(start)," handed over"
+            print "single antenna with ID: ", str(start)," handed over"
         if  len(sys.argv)<6: # grep all antennas from the antenna file
             positions=np.array(event["antennas"],dtype=float)
             decay_pos=event["tau_at_decay"][1]
@@ -549,10 +584,10 @@ def compute(opt_input,path, effective,zenith_sim, azimuth_sim, energy, injection
 
         Xant = [x_sim, y_sim, z_sim]
  	# Hack OMH 24/01
-	# alpha_sim=10
-	# beta_sim=10
-	# Xant = [x_sim, y_sim, 0]
- 	# Xant = [40000,0 , 0]
+	#alpha_sim=-10
+	#beta_sim=10
+	#Xant = [x_sim, y_sim, 0]
+ 	#Xant = [40000,0 , 5700]
 	#print "Xant, Xmax:",Xant,Xmax
         ush = Xmax-Xant
         ush = ush/np.linalg.norm(ush)  # Unitary vector pointing to Xmax from antenna pos
@@ -569,7 +604,7 @@ def compute(opt_input,path, effective,zenith_sim, azimuth_sim, energy, injection
           f.close()
 
         ###plots
-        DISPLAY=1
+        DISPLAY=0
         if DISPLAY==1:
             import pylab as pl
             import matplotlib.pyplot as plt

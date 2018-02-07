@@ -34,17 +34,16 @@ def _getXmax(primarytype, energy, zen2):
         a=62.5 # g/cm2
         c=357.5 #g/cm2
         
-# fix for CR   
+# fix for CR (zenith computed @ shower core position
     if primarytype=='proton' or  primarytype=='iron' or primarytype=='Iron':
         Re= 6370949 # m, Earth radius
         injh=100000 # m for CR
         GdAlt=1500 # actual height of our array aboe sealevel
-        # corection for zenith, baing a the point of impact
-        ab = np.sqrt((Re + injh)**2. - (Re+GdAlt)**2*np.sin(np.pi-np.deg2rad(zen2))**2) -(Re+GdAlt)*np.cos(np.pi-np.deg2rad(zen2)) 
-        #zen_inj = np.pi-np.arccos((ab**2+(Re+injh)**2-Re**2)/(2*ab*(Re+injh)))
+        # correction for zenith computed a the point of impact to zenith computed @ injection
+        ab = np.sqrt((Re + injh)**2. - (Re+GdAlt)**2*np.sin(np.pi-zen2)**2) -(Re+GdAlt)*np.cos(np.pi-zen2) 
         zen2 = np.pi-np.arccos((ab**2+(Re+injh)**2-Re**2)/(2*ab*(Re+injh)))
         
-        if primarytype=='proton': # pion, kaon .... aprroximated by proton
+        if primarytype=='proton': # pion, kaon .... approximated by proton
             a=62.5 # g/cm2
             c=357.5 #g/cm2    
         if primarytype=='iron' or primarytype=='Iron': # aprroximated by proton
@@ -52,8 +51,8 @@ def _getXmax(primarytype, energy, zen2):
             c=177.5 #g/cm2
     
     Xmax= a*np.log10(energy*10**6.)+c # E/EeV* 10**6. to be in TeV
-    print primarytype, energy, zen2
-    print "Xmax ", Xmax
+    #print "Zenith angle (Zhaires convention) @ injection:",zen2*180./np.pi
+    #print "Xmax ", Xmax
 
     return Xmax#/abs(np.cos(np.pi-zen2)) # TODO: how to correct for slanted shower
 
@@ -85,6 +84,6 @@ def _dist_decay_Xmax(zen2, injh2, Xmax_primary): #zen2: zenith of target shower
         X=X+ rho_0*np.exp(-g*M*hi/(R*T)) * step*100. #(deltah*100) *abs(1./np.cos(np.pi-zen2)) # Xmax in g/cm2, slanted = Xmax, vertical/ cos(theta); density in g/cm3, h: m->100cm, np.pi-zen2 since it is defined as where the showers comes from, abs(cosine) so correct for minus values
     
     
-    print "decay to Xmax: ", ai, " Xmaxheight ", h
+    #print "decay to Xmax: ", ai, " Xmaxheight ", h
     
     return h, ai # Xmax_height in m, Xmax_distance in m
