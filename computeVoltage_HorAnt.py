@@ -213,7 +213,6 @@ def get_voltage(time1, Ex, Ey, Ez, ush=[1, 0, 0], alpha=0, beta=0, typ="X"):
     if roundazimuth>=271 and roundazimuth<=360:
         roundazimuth=360-roundazimuth
 
-
     for i in range(nfreq):   # Using interpolation for every angle
         f[i]=freq[i,0]*freqscale
         indtheta=np.nonzero(theta[i,:]==int(zen))[0]
@@ -248,23 +247,23 @@ def get_voltage(time1, Ex, Ey, Ez, ush=[1, 0, 0], alpha=0, beta=0, typ="X"):
    	   lpr[i]=leffphi[i,indcom]
    	   lpa[i]=np.deg2rad(phasephi[i,indcom]) #*np.pi/180
     ''' 	
-	
-    if loaded==0:
-            RA[i]=realimp[i,0]
-            XA[i]=reactance[i,0]
-            Rlefft=ltr[i]*np.cos(lta[i])
-            Xlefft=ltr[i]*np.sin(lta[i])
-            Rleffp=lpr[i]*np.cos(lpa[i])
-            Xleffp=lpr[i]*np.sin(lpa[i])
-            Rleqt=((Rlefft*RL[i]-Xlefft*XL[i])*(RA[i]+RL[i]) + (Rlefft*XL[i]+Xlefft*RL[i])*(XA[i]+XL[i])) / ((RA[i]+RL[i])**2+(XA[i]+XL[i])**2)
-            Xleqt=((Rlefft*RL[i]+Xlefft*XL[i])*(XA[i]+XL[i]) + (Rlefft*XL[i]+Xlefft*RL[i])*(RA[i]+RL[i])) / ((RA[i]+RL[i])**2+(XA[i]+XL[i])**2)
-            ltr[i]=np.sqrt(Rleqt**2+Xleqt**2)
-            lta[i]=np.arccos(Rleqt/ltr[i])
-            Rleqp=((Rleffp*RL[i]-Xleffp*XL[i])*(RA[i]+RL[i]) + (Rleffp*XL[i]+Xleffp*RL[i])*(XA[i]+XL[i])) / ((RA[i]+RL[i])**2+(XA[i]+XL[i])**2)
-            Xleqp=((Rleffp*RL[i]+Xleffp*XL[i])*(XA[i]+XL[i]) + (Rleffp*XL[i]+Xleffp*RL[i])*(RA[i]+RL[i])) / ((RA[i]+RL[i])**2+(XA[i]+XL[i])**2)
-            lpr[i]=np.sqrt(Rleqp**2+Xleqp**2)
-            print(Rleqp,lpr[i])
-            lpa[i]=np.arccos(Rleqp/lpr[i])
+	if loaded==0:
+ 		RA[i]=realimp[i,0]
+ 		XA[i]=reactance[i,0]
+ 		Rlefft=ltr[i]*np.cos(lta[i])
+ 		Xlefft=ltr[i]*np.sin(lta[i])
+ 		Rleffp=lpr[i]*np.cos(lpa[i])
+ 		Xleffp=lpr[i]*np.sin(lpa[i])
+ 		Rleqt=((Rlefft*RL[i]-Xlefft*XL[i])*(RA[i]+RL[i]) + (Rlefft*XL[i]+Xlefft*RL[i])*(XA[i]+XL[i])) / ((RA[i]+RL[i])**2+(XA[i]+XL[i])**2)
+ 		Xleqt=((Rlefft*RL[i]+Xlefft*XL[i])*(XA[i]+XL[i]) + (Rlefft*XL[i]+Xlefft*RL[i])*(RA[i]+RL[i])) / ((RA[i]+RL[i])**2+(XA[i]+XL[i])**2)
+ 		ltr[i]=np.sqrt(Rleqt**2+Xleqt**2)
+ 		lta[i]=np.arccos(Rleqt/ltr[i])
+ 		Rleqp=((Rleffp*RL[i]-Xleffp*XL[i])*(RA[i]+RL[i]) + (Rleffp*XL[i]+Xleffp*RL[i])*(XA[i]+XL[i])) / ((RA[i]+RL[i])**2+(XA[i]+XL[i])**2)
+ 		Xleqp=((Rleffp*RL[i]+Xleffp*XL[i])*(XA[i]+XL[i]) + (Rleffp*XL[i]+Xleffp*RL[i])*(RA[i]+RL[i])) / ((RA[i]+RL[i])**2+(XA[i]+XL[i])**2)
+ 		lpr[i]=np.sqrt(Rleqp**2+Xleqp**2)
+ 		print(Rleqp,lpr[i])
+ 		lpa[i]=np.arccos(Rleqp/lpr[i])
+ 
 
     if loaded==0:#phases are not unwrap! so:
         for i in range(1,nfreq):
