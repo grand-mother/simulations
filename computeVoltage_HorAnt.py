@@ -235,34 +235,22 @@ def get_voltage(time1, Ex, Ey, Ez, ush=[1, 0, 0], alpha=0, beta=0, typ="X"):
 	lpr=interp1d([int(zen),int(zen)+1],np.transpose([lpr1,lpr2]))(zen)
 	lpa=interp1d([int(zen),int(zen)+1],np.transpose([lpa1,lpa2]))(zen)
 
-    
-    '''
-    for i in range(nfreq): # No interpolation 
-   	   f[i]=freq[i,0]*freqscale
-   	   indtheta=np.nonzero(theta[i,:]==round(zen))[0]
-   	   indphi=np.nonzero(phi[i,:]==roundazimuth)[0]
-   	   indcom=np.intersect1d(indtheta,indphi)
-   	   ltr[i]=lefftheta[i,indcom]
-   	   lta[i]=np.deg2rad(phasetheta[i,indcom]) #*np.pi/180
-   	   lpr[i]=leffphi[i,indcom]
-   	   lpa[i]=np.deg2rad(phasephi[i,indcom]) #*np.pi/180
-    ''' 	
 	if loaded==0:
- 		RA[i]=realimp[i,0]
- 		XA[i]=reactance[i,0]
- 		Rlefft=ltr[i]*np.cos(lta[i])
- 		Xlefft=ltr[i]*np.sin(lta[i])
- 		Rleffp=lpr[i]*np.cos(lpa[i])
- 		Xleffp=lpr[i]*np.sin(lpa[i])
- 		Rleqt=((Rlefft*RL[i]-Xlefft*XL[i])*(RA[i]+RL[i]) + (Rlefft*XL[i]+Xlefft*RL[i])*(XA[i]+XL[i])) / ((RA[i]+RL[i])**2+(XA[i]+XL[i])**2)
- 		Xleqt=((Rlefft*RL[i]+Xlefft*XL[i])*(XA[i]+XL[i]) + (Rlefft*XL[i]+Xlefft*RL[i])*(RA[i]+RL[i])) / ((RA[i]+RL[i])**2+(XA[i]+XL[i])**2)
- 		ltr[i]=np.sqrt(Rleqt**2+Xleqt**2)
- 		lta[i]=np.arccos(Rleqt/ltr[i])
- 		Rleqp=((Rleffp*RL[i]-Xleffp*XL[i])*(RA[i]+RL[i]) + (Rleffp*XL[i]+Xleffp*RL[i])*(XA[i]+XL[i])) / ((RA[i]+RL[i])**2+(XA[i]+XL[i])**2)
- 		Xleqp=((Rleffp*RL[i]+Xleffp*XL[i])*(XA[i]+XL[i]) + (Rleffp*XL[i]+Xleffp*RL[i])*(RA[i]+RL[i])) / ((RA[i]+RL[i])**2+(XA[i]+XL[i])**2)
- 		lpr[i]=np.sqrt(Rleqp**2+Xleqp**2)
- 		print(Rleqp,lpr[i])
- 		lpa[i]=np.arccos(Rleqp/lpr[i])
+ 	   RA[i]=realimp[i,0]
+ 	   XA[i]=reactance[i,0]
+ 	   Rlefft=ltr[i]*np.cos(lta[i])
+ 	   Xlefft=ltr[i]*np.sin(lta[i])
+ 	   Rleffp=lpr[i]*np.cos(lpa[i])
+ 	   Xleffp=lpr[i]*np.sin(lpa[i])
+ 	   Rleqt=((Rlefft*RL[i]-Xlefft*XL[i])*(RA[i]+RL[i]) + (Rlefft*XL[i]+Xlefft*RL[i])*(XA[i]+XL[i])) / ((RA[i]+RL[i])**2+(XA[i]+XL[i])**2)
+ 	   Xleqt=((Rlefft*RL[i]+Xlefft*XL[i])*(XA[i]+XL[i]) + (Rlefft*XL[i]+Xlefft*RL[i])*(RA[i]+RL[i])) / ((RA[i]+RL[i])**2+(XA[i]+XL[i])**2)
+ 	   ltr[i]=np.sqrt(Rleqt**2+Xleqt**2)
+ 	   lta[i]=np.arccos(Rleqt/ltr[i])
+ 	   Rleqp=((Rleffp*RL[i]-Xleffp*XL[i])*(RA[i]+RL[i]) + (Rleffp*XL[i]+Xleffp*RL[i])*(XA[i]+XL[i])) / ((RA[i]+RL[i])**2+(XA[i]+XL[i])**2)
+ 	   Xleqp=((Rleffp*RL[i]+Xleffp*XL[i])*(XA[i]+XL[i]) + (Rleffp*XL[i]+Xleffp*RL[i])*(RA[i]+RL[i])) / ((RA[i]+RL[i])**2+(XA[i]+XL[i])**2)
+ 	   lpr[i]=np.sqrt(Rleqp**2+Xleqp**2)
+ 	   print(Rleqp,lpr[i])
+ 	   lpa[i]=np.arccos(Rleqp/lpr[i])
  
 
     if loaded==0:#phases are not unwrap! so:
@@ -347,14 +335,16 @@ def inputfromjson(path,json_file):
     if not showerID:
         showerID = str(path.split('/')[-2])
 
-    # find that shower in the json file
-    event = [evt for evt in EventIterator(json_file) if evt["tag"]==showerID][0]
-
+    # find that shower in the json file	
+    try:
+      event = [evt for evt in EventIterator(json_file) if evt["tag"]==showerID][0]
+    except IndexError:
+      print "Error opening json file! tag field probably missing!"
+      return None,None,None,None,None
+      # Implement here try/except.
+    
     ### DECAY
     decay_pos=event["tau_at_decay"][2]
-    # if decay_pos[2]<0:
-    #     decay_pos[2] = 100
-    print "decay position: ", decay_pos
     injection_height=decay_pos[2]
 
     decay_pos=decay_pos+np.array([0.,0.,EARTH_RADIUS]) # corrected for earth radius
@@ -494,8 +484,8 @@ def compute(opt_input,path, effective,zenith_sim, azimuth_sim, energy, injection
             print "single antenna with ID: ", str(start)," handed over"
         if  len(sys.argv)<6: # grep all antennas from the antenna file
             positions=np.array(event["antennas"],dtype=float)
-            decay_pos=event["tau_at_decay"][1]
-            positions = positions - [decay_pos[0],decay_pos[1],0.]
+            decay_pos=np.array(event["tau_at_decay"][2])
+            positions = positions[:,[0,1,2]] - [decay_pos[0],decay_pos[1],0.]
             #positions=np.genfromtxt(path+'/antpos.dat')
             start=0
             end=len(positions)
@@ -522,8 +512,8 @@ def compute(opt_input,path, effective,zenith_sim, azimuth_sim, energy, injection
         Xmax_height, Xmax_distance = modules._dist_decay_Xmax(np.deg2rad(zenith_sim), injection_height, Xmax_primary) # d_prime: distance from decay point to Xmax
 	Xmax = np.array([0,0,injection_height])+Xmax_distance*np.array([caz*szen, saz*szen, czen])
 	#print [0,0,injection_height],Xmax_distance*np.array([caz*szen, saz*szen, czen]),Xmax
-        print 'Xmax=',Xmax_primary,' Xmax height=',Xmax_height,' Xmax distance =',Xmax_distance,'Xmax position= ',Xmax
-        print 'Now computing Xmax position from injection height=',injection_height,'m and (zen,azim) values',zenith_sim,azimuth_sim
+        #print 'Xmax=',Xmax_primary,' Xmax height=',Xmax_height,' Xmax distance =',Xmax_distance,'Xmax position= ',Xmax
+        #print 'Now computing Xmax position from injection height=',injection_height,'m and (zen,azim) values',zenith_sim,azimuth_sim
 
     ###### loop  over l --- LOOP OVER ANTENNA ARRAY
     for l in range(start,end):
@@ -589,6 +579,7 @@ def compute(opt_input,path, effective,zenith_sim, azimuth_sim, energy, injection
  	#Xant = [40000,0 , 5700]
 	#print "Xant, Xmax:",Xant,Xmax
         ush = Xmax-Xant
+	#print "Xant,Xmax,ush:",Xant,Xmax,ush
         ush = ush/np.linalg.norm(ush)  # Unitary vector pointing to Xmax from antenna pos
         voltage_NS, timeNS  = get_voltage( time1=time1_sim,Ex=Ex_sim, Ey=Ey_sim, Ez=Ez_sim, ush=ush, alpha=alpha_sim, beta=beta_sim, typ="X")
         voltage_EW, timeEW  = get_voltage( time1=time1_sim,Ex=Ex_sim, Ey=Ey_sim, Ez=Ez_sim, ush=ush, alpha=alpha_sim, beta=beta_sim, typ="Y")
