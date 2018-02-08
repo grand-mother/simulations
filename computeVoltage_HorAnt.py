@@ -501,19 +501,17 @@ def compute(opt_input,path, effective,zenith_sim, azimuth_sim, energy, injection
             end=len(positions)
         #    print "Array with ", end, " antennas handed over"
 
-    if effective==1: # effective zenith calculation needs Xmax position as input
-    #    print "effective zenith calculated - Xmax position approximated ..."
-        # Then compute Xmax
-        caz = np.cos(np.deg2rad(azimuth_sim))
-        saz = np.sin(np.deg2rad(azimuth_sim))
-        czen = np.cos(np.deg2rad(zenith_sim))
-        szen = np.sin(np.deg2rad(zenith_sim))
-        Xmax_primary = modules._getXmax(primary, energy, np.deg2rad(zenith_sim)) # approximation based on values from plots for gamma (=e) and protons (=pi) # g/cm2
-        Xmax_height, Xmax_distance = modules._dist_decay_Xmax(np.deg2rad(zenith_sim), injection_height, Xmax_primary) # d_prime: distance from decay point to Xmax
-	Xmax = np.array([0,0,injection_height])+Xmax_distance*np.array([caz*szen, saz*szen, czen])
-	#print [0,0,injection_height],Xmax_distance*np.array([caz*szen, saz*szen, czen]),Xmax
-        #print 'Xmax=',Xmax_primary,' Xmax height=',Xmax_height,' Xmax distance =',Xmax_distance,'Xmax position= ',Xmax
-        #print 'Now computing Xmax position from injection height=',injection_height,'m and (zen,azim) values',zenith_sim,azimuth_sim
+    # Compute Xmax
+    caz = np.cos(np.deg2rad(azimuth_sim))
+    saz = np.sin(np.deg2rad(azimuth_sim))
+    czen = np.cos(np.deg2rad(zenith_sim))
+    szen = np.sin(np.deg2rad(zenith_sim))
+    Xmax_primary = modules._getXmax(primary, energy, np.deg2rad(zenith_sim)) # approximation based on values from plots for gamma (=e) and protons (=pi) # g/cm2
+    Xmax_height, Xmax_distance = modules._dist_decay_Xmax(np.deg2rad(zenith_sim), injection_height, Xmax_primary) # d_prime: distance from decay point to Xmax
+    Xmax = np.array([0,0,injection_height])+Xmax_distance*np.array([caz*szen, saz*szen, czen])
+    #print [0,0,injection_height],Xmax_distance*np.array([caz*szen, saz*szen, czen]),Xmax
+    #print 'Xmax=',Xmax_primary,' Xmax height=',Xmax_height,' Xmax distance =',Xmax_distance,'Xmax position= ',Xmax
+    #print 'Now computing Xmax position from injection height=',injection_height,'m and (zen,azim) values',zenith_sim,azimuth_sim
 
     ###### loop  over l --- LOOP OVER ANTENNA ARRAY
     for l in range(start,end):
@@ -531,52 +529,55 @@ def compute(opt_input,path, effective,zenith_sim, azimuth_sim, energy, injection
         time1_sim= time1_sim*1e-9 # time has to be handed in s
 
         #print 'Now computing antenna response...'
-        if effective==1:
 
-            # Compute effective zenith
-            # First get antenna position
+        # Compute effective zenith
+        # First get antenna position
 
-            #print 'Reading antenna position from parameter input.'
-            if (opt_input=='json' or opt_input=='txt') and (len(sys.argv)==11) :
-                    x_sim = float(sys.argv[6])
-                    y_sim = float(sys.argv[7])
-                    z_sim = float(sys.argv[8])
+        #print 'Reading antenna position from parameter input.'
+        if (opt_input=='json' or opt_input=='txt') and (len(sys.argv)==11) :
+        	x_sim = float(sys.argv[6])
+        	y_sim = float(sys.argv[7])
+        	z_sim = float(sys.argv[8])
 
-                    # include a mountain slope - correction of zenith angle
-                    alpha_sim=float(sys.argv[9])
-                    beta_sim=float(sys.argv[10])
+        	# include a mountain slope - correction of zenith angle
+        	alpha_sim=float(sys.argv[9])
+        	beta_sim=float(sys.argv[10])
 
-            elif (opt_input=='manual') and (len(sys.argv)==15) :
-                    x_sim = float(sys.argv[10])
-                    y_sim = float(sys.argv[11])
-                    z_sim = float(sys.argv[12])
+        elif (opt_input=='manual') and (len(sys.argv)==15) :
+        	x_sim = float(sys.argv[10])
+        	y_sim = float(sys.argv[11])
+        	z_sim = float(sys.argv[12])
 
-                    # include a mountain slope - correction of zenith angle
-                    alpha_sim=float(sys.argv[13])
-                    beta_sim=float(sys.argv[14])
-            else :
-                try :
-                    if opt_input=='json':
-                        x_sim,y_sim,z_sim = positions[l] #,alpha_sim,beta_sim
-                        alpha_sim = 0.
-                        beta_sim = 0.
-                    else:
-                        #print 'Trying to read antenna position from antpos.dat file...'
-                        numberline = int(l) + 1
-                        line = linecache.getline(path+'/antpos.dat', numberline)
-			            #[x_sim, y_sim, z_sim] = map(float, line.split())
-                        [x_sim, y_sim, z_sim, alpha_sim, beta_sim] = map(float, line.split())
-                    #print 'Read antenna position from antpos.dat file... Antenna',l,' at position [', x_sim, y_sim, z_sim,'].'
-                except :
-                    print 'No antenna position file found, please put antpos.dat in', path, 'or enter check antenna informations in json file or enter antenna positions as arguments.'
-                    sys.exit()
+        	# include a mountain slope - correction of zenith angle
+        	alpha_sim=float(sys.argv[13])
+        	beta_sim=float(sys.argv[14])
+        else :
+            try :
+        	if opt_input=='json':
+        	    x_sim,y_sim,z_sim = positions[l] #,alpha_sim,beta_sim
+        	    alpha_sim = 0.
+        	    beta_sim = 0.
+        	else:
+        	    #print 'Trying to read antenna position from antpos.dat file...'
+        	    numberline = int(l) + 1
+        	    line = linecache.getline(path+'/antpos.dat', numberline)
+				#[x_sim, y_sim, z_sim] = map(float, line.split())
+        	    [x_sim, y_sim, z_sim, alpha_sim, beta_sim] = map(float, line.split())
+        	#print 'Read antenna position from antpos.dat file... Antenna',l,' at position [', x_sim, y_sim, z_sim,'].'
+            except :
+        	print 'No antenna position file found, please put antpos.dat in', path, 'or enter check antenna informations in json file or enter antenna positions as arguments.'
+        	sys.exit()
+        
+	if effective==0:  # Force a vertical antenna
+	    alpha_sim=0
+	    beta_sim=0
 
         Xant = [x_sim, y_sim, z_sim]
  	# Hack OMH 24/01
 	#alpha_sim=-10
 	#beta_sim=10
 	#Xant = [x_sim, y_sim, 0]
- 	#Xant = [40000,0 , 5700]
+ 	#Xant = [40000,0 , 0]
 	#print "Xant, Xmax:",Xant,Xmax
         ush = Xmax-Xant
 	#print "Xant,Xmax,ush:",Xant,Xmax,ush
