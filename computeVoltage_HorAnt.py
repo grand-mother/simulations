@@ -592,7 +592,7 @@ def compute(opt_input,path, effective,zenith_sim, azimuth_sim, energy, injection
           f.close()
 
         ###plots
-        DISPLAY=1
+        DISPLAY=0
         if DISPLAY==1:
             import pylab as pl
             import matplotlib.pyplot as plt
@@ -645,7 +645,6 @@ def compute(opt_input,path, effective,zenith_sim, azimuth_sim, energy, injection
                                 round(timeEW[com_ind_max],11), voltage_com[com_ind_max], round(timeEW[com_ind_min],11), voltage_com[com_ind_min] )  )
 
 ############### end of loop over antennas
-    print voltage, event
     if opt_input=='json':
         if len(voltage)==0:
             print "- effective zenith not fulfilled - NO VOLTAGE COMPUTED"
