@@ -45,9 +45,6 @@ def amp2DPlot(zvector,tit):
     cbar.set_label('peak-peak voltage ($\mu$V)')
 
 wkdir = sys.argv[1] # path where the simulation file is
-rmsNoise = 15  #muV
-th = rmsNoise*2*3 # pp = 3*2*rms noise (agressive)
-th = rmsNoise*2*6 # pp = 6*2*rms noise (conservative)
 
 # First load json infos
 json_file =  glob.glob(wkdir+'/*'+'.voltage.json')[0]
@@ -74,6 +71,8 @@ for evt in EventIterator(json_file):  # Should only be one
   beta = ants[:,4]
 
   # Voltage infos
+  [bTrig,antsInd,antsIDs] = checkTrig(event) 
+  if bTrig:
   antsin = []
   Ampx=[]
   Ampy=[]
@@ -84,14 +83,14 @@ for evt in EventIterator(json_file):  # Should only be one
     antsin.append(int(v[i,0]))  # Index of antennas with radio simulation
     Ampx.append(float(v[i,1]))  # NS arm
     Ampy.append(float(v[i,2]))  # EW arm
+    Ampz.append(float(v[i,3]))  # Vert arm
     Ampxy.append(float(v[i,4]))  # EW arm
 
-    Ampz.append(float(v[i,3]))  # Vert arm
-  antsin = np.array(antsin)
-  Ampx = np.array(Ampx)
-  Ampy = np.array(Ampy)
-  Ampz = np.array(Ampz)
-  Ampxy = np.array(Ampxy)
+  antsin = np.array(antsin[antsInd])
+  Ampx = np.array(Ampx[antsInd])
+  Ampy = np.array(Ampy[antsInd])
+  Ampz = np.array(Ampz[antsInd])
+  Ampxy = np.array(Ampxy[antsInd])
 
 print  "Decay at position",decay_pos,"in direction (theta,phi)=",tau_dir
 ants = ants[antsin]

@@ -331,22 +331,17 @@ def get_voltage(time1, Ex, Ey, Ez, ush=[1, 0, 0], alpha=0, beta=0, typ="X"):
 def inputfromjson(path,json_file):
 #===========================================================================================================
     # shower you are interested in
-    showerID = str(path.split('/')[-1])
-    if not showerID:
-        showerID = str(path.split('/')[-2])
+  #showerID = str(path.split('/')[-1])    
+  #if not showerID:
+  #      showerID = str(path.split('/')[-2])
+  for event in EventIterator(json_file):
+    #if showerID !=  event["tag"]:
+    #    print "Wrong tag!... Was expecting",showerID,", got",event["tag"]
+    #	return
 
-    # find that shower in the json file	
-    try:
-      event = [evt for evt in EventIterator(json_file) if evt["tag"]==showerID][0]
-    except IndexError:
-      print "Error opening json file! tag field probably missing!"
-      return None,None,None,None,None
-      # Implement here try/except.
-    
     ### DECAY
     decay_pos=event["tau_at_decay"][2]
     injection_height=decay_pos[2]
-
     decay_pos=decay_pos+np.array([0.,0.,EARTH_RADIUS]) # corrected for earth radius
     #print "decay position after correction: ", decay_pos
     decay_altitude=event["tau_at_decay"][3]
@@ -354,8 +349,10 @@ def inputfromjson(path,json_file):
 
     ### ANGLES
     v=event["tau_at_decay"][3]# shower direction, assuming decay products strongly forward beamed
-    zenith_sim = np.degrees(np.arccos(np.dot(v, decay_pos) / np.linalg.norm(decay_pos))) # zenith in GRAND conv.
-    #print "theta: ", zenith_sim
+    #zenith_sim = np.degrees(np.arccos(np.dot(v, decay_pos) / np.linalg.norm(decay_pos))) # zenith in GRAND conv.
+    zenith_sim = np.degrees(np.arccos(v[2])) # zenith in GRAND conv.
+    #print "theta:", zenith_sim
+    
     #orthogonal projection of v onto flat plane to get the azimuth
     x=np.array([1.,0.,0.]) #NS
     y=np.array([0.,1.,0.]) #EW
@@ -595,7 +592,7 @@ def compute(opt_input,path, effective,zenith_sim, azimuth_sim, energy, injection
           f.close()
 
         ###plots
-        DISPLAY=0
+        DISPLAY=1
         if DISPLAY==1:
             import pylab as pl
             import matplotlib.pyplot as plt
@@ -648,6 +645,7 @@ def compute(opt_input,path, effective,zenith_sim, azimuth_sim, energy, injection
                                 round(timeEW[com_ind_max],11), voltage_com[com_ind_max], round(timeEW[com_ind_min],11), voltage_com[com_ind_min] )  )
 
 ############### end of loop over antennas
+    print voltage, event
     if opt_input=='json':
         if len(voltage)==0:
             print "- effective zenith not fulfilled - NO VOLTAGE COMPUTED"
