@@ -230,7 +230,7 @@ if len(sys.argv)<3: # grep all antennas from the antenna file
             plt.show()
 
 
-        outfile=path+"/fake_"+str(l)+".txt"
+        outfile=path+"/fout_"+str(l)+".txt"
         f = file(outfile,"w")
         for i in np.arange(len(tx)):
                 print >>f,"%e	%1.3e	%1.3e	%1.3e" % (tx[i], vx[i], vy[i], vz[i] )  # time in s         

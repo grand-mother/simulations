@@ -4,9 +4,10 @@ from os.path import  join
 import sys
 import math
 import numpy as np
+from modules import TopoToAntenna
 #import pylab as pl
 
-wkdir = './'
+wkdir = '/home/martineau/GRAND/soft/neutrinos/simulations/'
 
 import linecache
 from scipy.fftpack import rfft, irfft, rfftfreq
@@ -31,9 +32,16 @@ fr=np.arange(20,301,5)
 
 # Load antenna response files
 #fileleff_x=wkdir+'HorizonAntenna_leff_loaded.npy' # 'HorizonAntenna_leff_notloaded.npy' if loaded=0, NS component
-fileleff_x=wkdir+'HorizonAntenna_SNarm_leff_loaded.npy' # 'HorizonAntenna_leff_notloaded.npy' if loaded=0, NS component
-fileleff_y=wkdir+'HorizonAntenna_EWarm_leff_loaded.npy' # 'HorizonAntenna_leff_notloaded.npy' if loaded=0, EW component
-fileleff_z=wkdir+'HorizonAntenna_Zarm_leff_loaded.npy' # 'HorizonAntenna_leff_notloaded.npy' if loaded=0, Vert component
+freespace = 1
+if freespace==1:
+  fileleff_x=wkdir+'butthalftripleX4p5mfreespace_leff.npy' # 
+  fileleff_y=wkdir+'butthalftripleY4p5mfreespace_leff.npy' # 'HorizonAntenna_leff_notloaded.npy' if loaded=0, EW component
+  fileleff_z=wkdir+'butthalftripleZ4p5mfreespace_leff.npy'
+else:
+  fileleff_x=wkdir+'HorizonAntenna_SNarm_leff_loaded.npy' # 'HorizonAntenna_leff_notloaded.npy' if loaded=0, NS component
+  fileleff_y=wkdir+'HorizonAntenna_EWarm_leff_loaded.npy' # 'HorizonAntenna_leff_notloaded.npy' if loaded=0, EW component
+  fileleff_z=wkdir+'HorizonAntenna_Zarm_leff_loaded.npy' # 'HorizonAntenna_leff_notloaded.npy' if loaded=0, Vert component
+print 'Loading',fileleff_x  
 freq1,realimp1,reactance1,theta1,phi1,lefftheta1,leffphi1,phasetheta1,phasephi1=np.load(fileleff_x) ### this line cost 6-7s
 RL1=interp1d(fr, RLp, bounds_error=False, fill_value=0.0)(freq1[:,0])
 XL1=interp1d(fr, XLp, bounds_error=False, fill_value=0.0)(freq1[:,0])
@@ -44,62 +52,13 @@ freq3,realimp3,reactance3,theta3,phi3,lefftheta3,leffphi3,phasetheta3,phasephi3=
 RL3=interp1d(fr, RLp, bounds_error=False, fill_value=0.0)(freq3[:,0])
 XL3=interp1d(fr, XLp, bounds_error=False, fill_value=0.0)(freq3[:,0])
 
-# #===========================================================================================================
-# def GRANDtoNEC(zenith=None, azimuth =None):
-# #===========================================================================================================
-#     zen = (180-zenith)
-#     azim = azimuth + 90 # az_ant=az_GRAND +90deg
-#     if azim>360:
-#       azim = azim-360
-#
-#     return [zen,azim]
-#
-# #===========================================================================================================
-# def NECtoGRAND(zenith=None, azimuth =None):
-# #===========================================================================================================
-#     zen = (180-zenith)
-#     azim = azimuth - 90 # az_GRAND=az_ant -90deg
-#     if azim>360:
-#         azim = azim-360
-#     elif azim<0:
-#         azim = azim+360
-#
-#     return [zen,azim]
+
+
 
 #===========================================================================================================
 def get_voltage(time1, Ex, Ey, Ez, ush=[1, 0, 0], alpha=0, beta=0, typ="X"):
 #===========================================================================================================
     # Note: azim & zenith are in GRAND convention
-
-    def TopoToAntenna(u,alpha,beta): #from coordinates in the topography frame to coordinates in the antenna
-        alpha=alpha*np.pi/180 #around y
-        beta=beta*np.pi/180 #around x
-        cb = np.cos(beta)
-        sb = np.sin(beta)
-        ca = np.cos(alpha)
-        sa = np.sin(alpha)
-        # rotx = np.array([[1,0,0],[0,cb,-sb],[0,sb,cb]])
-        # rotx = np.linalg.inv(rotx)  # Referential rotates ==> use inverse matrix
-        roty = np.array([[ca,0,sa],[0,1,0],[-sa,0,ca]])
-        roty = np.linalg.inv(roty)  # Since we rotate referential, inverse transformation should be applied
-        rotz = np.array([[cb,-sb,0],[sb,cb,0],[0,0,1]])
-        rotz = np.linalg.inv(rotz) # Since we rotate referential, inverse transformation should be applied
-        rotyz=roty.dot(rotz)  # beta and then alpha rotation. This induces a EW component for x arm
-
-        # Now rotate along zp so that we are back with x along NS
-        xarm = [1,0,0]  #Xarm
-        xarmp = rotyz.dot(xarm)  # Rotate Xarm along slope
-        # Compute antrot, angle of NS direction in antenna ref = angle to turn Xarm back to North
-        antrot = math.atan2(xarmp[1],xarmp[0])*180/np.pi
-        #print "antrot=",antrot
-        cz = np.cos(antrot*np.pi/180)
-        sz = np.sin(antrot*np.pi/180)
-        rotzant = np.array([[cz,-sz,0],[sz,cz,0],[0,0,1]])
-        rotzant = np.linalg.inv(rotzant)
-        rottot = rotzant.dot(rotyz)
-
-        [xp,yp,zp] = rottot.dot(u)
-        return np.array([xp,yp,zp])
 
     # Load proper antenna response matrix
     if typ=="X":
@@ -585,10 +544,14 @@ def compute(opt_input,path, effective,zenith_sim, azimuth_sim, energy, injection
 
         #pl.savetxt(path+'out_'+str(l)+'.txt', (timeEW, voltage_EW, voltage_NS), newline='\r\n')#, voltage_NS)) # is not working correctly
         if np.size(timeEW)>0:   # Dat was computed
-          f = file(path+'/out_'+str(l)+'.txt',"w")
-          print "OUTFILE : ", path+'/out_'+str(l)+'.txt'
+	  if freespace == 1:
+            f = file(path+'/out_'+str(l)+'_0.txt',"w")
+          else:
+	    f = file(path+'/out_'+str(l)+'.txt',"w")
+	  print "OUTFILE : ", f
           for i in np.arange(len(timeEW)):
             print >>f,"%1.5e	%1.2e	%1.2e	%1.2e" % (timeNS[i], voltage_NS[i], voltage_EW[i], voltage_vert[i] ) # same number of digits as input
+	      
           f.close()
 
         ###plots
@@ -611,7 +574,8 @@ def compute(opt_input,path, effective,zenith_sim, azimuth_sim, energy, injection
             plt.xlabel('Time (nsec)')
             plt.ylabel('Voltage (muV)')
             plt.legend(loc='best')
-
+	    
+	    print "Vpp:",np.max(voltage_EW)-np.min(voltage_EW),np.max(voltage_NS)-np.min(voltage_NS),np.max(voltage_vert)-np.min(voltage_vert)
             plt.show()
 
 ##################################################################

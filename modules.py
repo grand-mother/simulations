@@ -1,9 +1,7 @@
-
 import os
 import sys
 import numpy as np
-
-
+import math
 
 
 #zen is in GRAND convention in degrees
@@ -20,6 +18,36 @@ import numpy as np
 #Xmax_height, Xmax_distance = modules._dist_decay_Xmax(zen_inj, injh, Xmax_primary) #
 #d_prime: distance from decay point to Xmax
 
+
+def TopoToAntenna(u,alpha,beta): #from coordinates in the topography frame to coordinates in the antenna
+    alpha=alpha*np.pi/180 #around y
+    beta=beta*np.pi/180 #around x
+    cb = np.cos(beta)
+    sb = np.sin(beta)
+    ca = np.cos(alpha)
+    sa = np.sin(alpha)
+    # rotx = np.array([[1,0,0],[0,cb,-sb],[0,sb,cb]])
+    # rotx = np.linalg.inv(rotx)  # Referential rotates ==> use inverse matrix
+    roty = np.array([[ca,0,sa],[0,1,0],[-sa,0,ca]])
+    roty = np.linalg.inv(roty)  # Since we rotate referential, inverse transformation should be applied
+    rotz = np.array([[cb,-sb,0],[sb,cb,0],[0,0,1]])
+    rotz = np.linalg.inv(rotz) # Since we rotate referential, inverse transformation should be applied
+    rotyz=roty.dot(rotz)  # beta and then alpha rotation. This induces a EW component for x arm
+
+    # Now rotate along zp so that we are back with x along NS
+    xarm = [1,0,0]  #Xarm
+    xarmp = rotyz.dot(xarm)  # Rotate Xarm along slope
+    # Compute antrot, angle of NS direction in antenna ref = angle to turn Xarm back to North
+    antrot = math.atan2(xarmp[1],xarmp[0])*180/np.pi
+    #print "antrot=",antrot
+    cz = np.cos(antrot*np.pi/180)
+    sz = np.sin(antrot*np.pi/180)
+    rotzant = np.array([[cz,-sz,0],[sz,cz,0],[0,0,1]])
+    rotzant = np.linalg.inv(rotzant)
+    rottot = rotzant.dot(rotyz)
+
+    [xp,yp,zp] = rottot.dot(u)
+    return np.array([xp,yp,zp])
 
 
 def _getXmax(primarytype, energy, zen2):
