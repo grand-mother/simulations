@@ -6,15 +6,20 @@ import time
 import modules
 import numpy as np
 DISPLAY = 0
+CC = 1
 if DISPLAY:
   import matplotlib.pyplot as pl
   import matplotlib.colors as colors
   import matplotlib.cm as cm
   from mpl_toolkits.mplot3d import Axes3D
-
-RETRODIR = "/home/martineau/GRAND/soft/neutrinos/retro/"
-MAPDIR = "/home/martineau/GRAND/GRAND/data/maps/ASTER-GDEM2/"
+if CC==1:
+  RETRODIR = "/pbs/throng/trend/soft/sim/GRANDsim/retro/"
+  MAPDIR = "/sps/hep/trend/neu/maps/ASTER-GDEM2/"
+else:
+  RETRODIR = "/home/martineau/GRAND/soft/neutrinos/retro/"
+  MAPDIR = "/home/martineau/GRAND/GRAND/data/maps/ASTER-GDEM2/"
 sys.path.append(RETRODIR)
+sys.path.append(RETRODIR+"lib/python/")
 from grand_tour import Topography
 from retro.event import EventIterator
 #sys.path.append("/home/martineau/GRAND/soft/neutrinos/retro-ccin2p3/scripts/")
@@ -106,7 +111,8 @@ def compute_ray(r0, r1, lam):
 # Max offset to plane traj between source and antenna (m)
 # RMS offset to plane traj between source and antenna (m)
     
-    flat = False
+    global flat
+    #flat = False
     v = r1-r0
     if np.linalg.norm(v)>76000:  # Working only on antenna closer than 76km from Xmax
       print "Xmax too far"
@@ -176,9 +182,7 @@ def compute_ray(r0, r1, lam):
 	  
 def fresnel(event):
     """Extract the relevant tau info from an event"""
-    global origin, topo 
-    flat = False  # Use topography of flat ground (with Earth curvature)
-    DISPLAY = 0
+    global origin, topo, flat 
     #50MHz: lam=6m
     #100MHz: lam=3m
     c0 = 299792458
@@ -229,7 +233,7 @@ def fresnel(event):
 
     ## Loop on antennas in the shower
     for i in range(len(ra[:, 1])):
-      print '*** Antenna ',i,ra[i, :]
+      #print '*** Antenna ',i,ra[i, :]
 
       dBAtt = np.ones((1,len(lam)))
       # Loop n all frequencies
@@ -256,12 +260,15 @@ def fresnel(event):
  	dBAtt[0,j] = dbAtt2
 	
       dBAtt = np.insert(dBAtt,0,int(i))
+      #print dBAtt
       np.savetxt(fid, dBAtt[np.newaxis],fmt="%s",delimiter=' ',newline='\n')
       
 def process(path):
     """Summarise a set of event files"""
-    global origin, topo 
+    global origin, topo, flat 
     origin, topo = None, None
+    flat = True # Use topography of flat ground (with Earth curvature)
+    print "*** Warning: flat=",flat
     for name in os.listdir(path):
         if not name.endswith("json"):
 	    continue

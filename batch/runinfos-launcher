@@ -1,0 +1,46 @@
+#!/bin/bash
+
+#===============================================================================
+# Grid Engine steering options
+#===============================================================================
+## Set the name
+#$ -N runinfos
+
+## Submit job under TREND group
+#$ -P P_trend
+
+## Merge the stdout et stderr in a single file
+#$ -j y
+
+## Files .e et .o copied to current working directory
+## -cwd
+
+## Notify stop and kill signals before issuing them.
+## -notify
+
+## CPU time
+#$ -l ct=36:00:00
+
+## Memory
+#$ -l vmem=16.0G
+
+## Disk space
+#$ -l fsize=30.0G
+
+## Request /sps/:
+#$ -l sps=1
+
+#$ -l irods=1
+
+## Files .e et .o copied to the directory
+#$ -e /sps/hep/trend/slecoz/simudataTRENDout/
+#$ -o /sps/hep/trend/slecoz/simudataTRENDout/
+
+#===============================================================================
+
+cd $TMPDIR
+wrkdir="$PWD/runinfos/"
+mkdir $wrkdir
+echo $wrkdir
+
+python /pbs/throng/trend/soft/ana/TREND_insertsimu/runinfos.py $wrkdir

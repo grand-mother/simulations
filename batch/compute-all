@@ -1,0 +1,41 @@
+mainpath=/sps/hep/trend/zhaires/trend-50/without-freq-sandra-iron/7e16/
+fieldspath=${mainpath}
+wrkdir=/sps/hep/trend/slecoz/zhaires/trend-50/
+
+
+ndones=`cat ${wrkdir}done.txt | wc -l`
+fields=`ls ${fieldspath}*.tgz | cut -d . -f1 | uniq`
+nfields=`echo $fields | wc -l`
+echo $fields
+
+count=0
+
+rm ${wrkdir}todo*.txt
+
+for field in $fields
+do
+field=${field##*/}
+echo $field
+veto=`grep $field ${wrkdir}done.txt | wc -l`
+
+if [ $veto -eq 0 ]
+then
+let number=count/40
+echo $number
+echo $fieldspath$field  >> ${wrkdir}todo${number}.txt
+let count=count+1
+fi
+
+done
+
+
+
+
+ntodo=`ls ${wrkdir} | grep todo | wc -l`
+let ntodo=ntodo-1
+for i in `seq 0 $ntodo`
+do
+qsub -P P_trend -j y -cwd -l vmem=4.0G -l sps=1  ${wrkdir}computeAntennaSignal_core.sh $i
+#echo ${wrkdir}computeAntennaSignal_core.sh
+#${wrkdir}computeAntennaSignal_core.sh $i
+done
