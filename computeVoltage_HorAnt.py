@@ -115,12 +115,13 @@ def get_voltage(time1, Ex, Ey, Ez, ush=[1, 0, 0], alpha=0, beta=0, typ="X"):
     # print [0,1,0],TopoToAntenna([0,1,0],alpha,beta)
     # print [0,0,1],TopoToAntenna([0,0,1],alpha,beta)
     # alpha()
-
+    zen = 175
     if typ=='X':
         print "Zenith & azimuth in antenna framework:",zen, azim
-    if zen>90:
-        print "Signal originates below antenna horizon! No antenna response computed. Abort."
-        return([],[])
+    #if zen>90:
+    #    print "Signal originates below antenna horizon! No antenna response computed. Abort."
+    #    return([],[])
+
     # Now take care of Efield signals
     delt = time1[1]-time1[0];
     Fs = 1/delt
