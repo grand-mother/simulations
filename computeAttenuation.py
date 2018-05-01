@@ -115,7 +115,7 @@ def compute_ray(r0, r1, lam):
     #flat = False
     v = r1-r0
     if np.linalg.norm(v)>76000:  # Working only on antenna closer than 76km from Xmax
-      print "Xmax too far"
+      #print "Xmax too far"
       return None, None, None, None, None
     vn = v/np.linalg.norm(v)
     s = np.arange(0,np.linalg.norm(v),100)  # 100m step

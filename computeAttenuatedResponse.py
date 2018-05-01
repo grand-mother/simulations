@@ -9,7 +9,7 @@ import pylab as pl
 from scipy.interpolate import interp1d
 from scipy.fftpack import rfft, irfft, rfftfreq            
 
-CC = 0
+CC = 1
 if CC==1:
   RETRODIR = "/pbs/throng/trend/soft/sim/GRANDsim/retro/"
 else:
@@ -86,7 +86,8 @@ def process(target):
   t0 = time.time()
 
   # Set target path
-  evtpath = "/home/martineau/GRAND/GRAND/data/massProd/flat/"
+  #evtpath = "/home/martineau/GRAND/GRAND/data/massProd/flat/"
+  evtpath = './'
   jsonf = evtpath+target+".voltage.json"
   attf = evtpath+target+".att"
   tarf =  evtpath+target+".tgz"
