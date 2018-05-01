@@ -281,6 +281,6 @@ def process(path):
     
 
 if __name__ == "__main__":
-    print "Usage: >python computeFresnel.py <path to json file>"
+    print "Usage: >python computeAttenuation.py <path to json file>"
     process(sys.argv[1])
 	

@@ -1,127 +1,30 @@
 import sys
 import glob
-#sys.path.append("/home/martineau/GRAND/soft/neutrinos/simulations")
+import time
 import modules
-#import computeVoltage_HorAnt as comp
 import os.path
+import tarfile
 import numpy as np
 import pylab as pl
-from scipy.signal import butter, lfilter
-from scipy.fftpack import rfft, irfft, rfftfreq
 from scipy.interpolate import interp1d
+from scipy.fftpack import rfft, irfft, rfftfreq            
+
+CC = 0
+if CC==1:
+  RETRODIR = "/pbs/throng/trend/soft/sim/GRANDsim/retro/"
+else:
+  RETRODIR = "/home/martineau/GRAND/soft/neutrinos/retro/"
+sys.path.append(RETRODIR)
+sys.path.append(RETRODIR+"lib/python/")
 
 sys.path.append("/home/martineau/GRAND/soft/neutrinos/retro-ccin2p3/scripts")
 from retro.event import EventIterator, EventLogger
-#sys.path.insert(0, '/home/martineau/GRAND/soft/neutrinos/retro-ccin2p3/scripts')
-from plotShowerCaras import doScatterCol
-
-from computeFresnel import fresnel
 
 exclude = "/usr/local/python/python-2.7/lib/python2.7/site-packages"
 sys.path = [v for v in sys.path if not (exclude in v)]
-pl.style.use("/home/martineau/GRAND/soft/neutrinos/retro-ccin2p3/deps/mplstyle-l3/style/l3.mplstyle")
-
-# Flat
-#target ="/home/martineau/GRAND/GRAND/data/massProd/E.9e18_Z.89_A.334_La.41_Lo.87_H.663_D.42276570031824766"   
-#target="/home/martineau/GRAND/GRAND/data/massProd/E.9e18_Z.90_A.283_La.42_Lo.86_H.1105_D.14135798811818680"
-#target="/home/martineau/GRAND/GRAND/data/massProd/E.9e18_Z.92_A.115_La.42_Lo.87_H.2500_D.11451299271365943"
-#target="/home/martineau/GRAND/GRAND/data/massProd/E.9e18_Z.95_A.10_La.41_Lo.86_H.4672_D.36379192182258783"  
-
-path = "/home/martineau/GRAND/GRAND/data/massProd/HS1vertfix/"
-# HS1
-#target= "E.9e18_Z.92_A.157_La.42_Lo.87_H.2755_D.12509011140557780" 
-#target= "E.9e18_Z.89_A.87_La.42_Lo.87_H.1648_D.29501657169930681" 
-target= "E.9e18_Z.89_A.316_La.42_Lo.86_H.1497_D.6301798171336067"
-#target= "E.7e17_Z.89_A.313_La.42_Lo.86_H.1501_D.21507668022063004"
-jsonf = path+target+".voltage.json"
-attf = path+target+".att"
-
-FREQMIN = 50e6
-FREQMAX = 200e6
-
-def butter_bandpass(lowcut, highcut, fs, order):
-    nyq = 0.5 * fs
-    low = lowcut / nyq
-    high = highcut / nyq
-    b, a = butter(order, [low, high], btype='band')
-    return b, a
-
-def butter_bandpass_filter(data, lowcut, highcut, fs, order):
-    b, a = butter_bandpass(lowcut, highcut, fs, order)
-    y = lfilter(b, a, data)
-    return y
-
-def Filtering(x,fs,lowcut,highcut):
-    return butter_bandpass_filter(x, lowcut, highcut, fs, order=5)
-
-def testFiltering():
-    fs = 1e10  #10GHz
-    frange = np.arange(1,30)*1e7  # Frequency range
-    resp = np.zeros(frange.shape)
-    t = np.arange(20000)*1e-10  # Time (s)
-    for f in range(len(frange)):
-      testx = np.sin(2*np.pi*frange[f]*t)
-      testxf = Filtering(testx,fs,FREQMIN,FREQMAX)
-      #pl.figure(f)
-      #pl.plot(t*1e9,testx)
-      #pl.plot(t*1e9,testxf)
-      #pl.show()
-      pos = np.arange(1000,len(t)) # Cut begining because unclean
-      resp[f] = 20*np.log10((np.max(testxf[pos])-np.min(testxf[pos]))/(np.max(testx[pos])-np.min(testx[pos])))
-      
-    pl.figure()
-    pl.plot(frange/1e6,resp)
-    pl.xlabel("Frequency (MHz)")
-    pl.ylabel("Filter response (dB)")
-    pl.grid(True)
-    pl.show()
-    raw_input()
 
 
-def filt(f):
-    #testFiltering()
-    d = np.loadtxt(f)
-    t = d[:,0]
-    ns = d[:,1]
-    ew = d[:,2]
-    vert = d[:,3]
-    t = (t-t[0])*1e9 #ns
-    tstep=1e-9  #s
-    fs = 1/tstep
-    nsf = Filtering(ns,fs,FREQMIN,FREQMAX)
-    ewf = Filtering(ew,fs,FREQMIN,FREQMAX)
-    vertf = Filtering(vert,fs,FREQMIN,FREQMAX)
-    
-    if 0:
-      pl.plot(t,nsf,'--b')
-      pl.plot(t,ewf,'--g')
-      pl.plot(t,vertf,'--r')
-    
-    return np.array([max(nsf)-min(nsf),max(ewf)-min(ewf),max(vertf)-min(vertf)])
-    
-    
-def display(f):
-    #s = f.split("_")
-    #print s
-    d = np.loadtxt(f)
-    t = d[:,0]
-    ns = d[:,1]
-    ew = d[:,2]
-    vert = d[:,3]
-    t = (t-t[0])*1e9
-    
-    if 0:
-      pl.figure()
-      pl.plot(t,ns)
-      pl.plot(t,ew)
-      pl.plot(t,vert)
-      pl.xlabel("Time (ns)")
-      pl.ylabel("Voltage ($\mu$V)")
-      pl.xlim([0, max(t)])
-      pl.grid(True)
 
-    return np.array([max(ns)-min(ns),max(ew)-min(ew),max(vert)-min(vert)])
-    
 def attenuate(f,attdB):
     
     # Compute attenuation coefs
@@ -142,19 +45,24 @@ def attenuate(f,attdB):
     sel = np.where( (f>30e6) & (f<299e6) )
     att[sel] = fatt(f[sel])
         
-    t = (t-t[0])*1e9
+    #t = (t-t[0])*1e9
     vout = np.zeros(shape=(len(t),3))
+    res = []
     for i in range(1,4):
        v = d[:,i]
        fv = rfft(v)
        fva = fv*att
        vout[:,i-1] = irfft(fva)
        
-       if 0:
+       imax = np.argmax(vout[:,i-1],axis=0)
+       imin = np.argmin(vout[:,i-1],axis=0)
+       res = res+[t[imax],vout[imax,i-1],t[imin],vout[imin,i-1]]
+       
+       if 0:      
  	 pl.figure()
  	 pl.subplot(211)
  	 pl.plot(t,v)
- 	 pl.plot(t,vout[:,i])
+ 	 pl.plot(t,vout[:,i-1])
  	 pl.xlabel("Time (ns)")
  	 pl.ylabel("Voltage ($\mu$V)")
  	 pl.xlim([0, max(t)])
@@ -164,103 +72,73 @@ def attenuate(f,attdB):
  	 pl.xlabel("Frequency (MHz)")
  	 pl.ylabel("FFT")
  	 pl.xlim([0, 300])
- 	 raw_input()
-     
-    return np.array([max(vout[:,0])-min(vout[:,0]),max(vout[:,1])-min(vout[:,2]),max(vout[:,2])-min(vout[:,2])])
+	 
+    vcom = vout[:,1]+vout[:,2] 
+    imax = np.argmax(vcom,axis=0)
+    imin = np.argmin(vcom,axis=0)
+    res = res+[t[imax],vcom[imax],t[imin],vcom[imin]]
+    return res
 
-############################################################################################"
-##### Main program
-############################################################################################"
 
-pl.ion()
-DISPLAY = 0
+def process(target):
 
-# Load antennas
-for evt in EventIterator(jsonf):  # Should only be one
-    ants = np.array(evt["antennas"])
-    xants = ants[:,0]
-    yants = ants[:,1]
-    zants = ants[:,2]
-   
-    #fresnel(evt)  # TBD if diffAtt.tmp not up to date
+  print "o Processing", target
+  t0 = time.time()
 
-# Load attenuation
-attf = np.loadtxt(attf)
-antid = attf[:,0]
-att = attf[:,1:]
-res = []
-for i in range(int(max(antid))):  # Allow 2000 antennas at most
-  file_freespace = path+target+"/out_{0}_0.txt".format(i)  
-  file_ground = path+target+"/out_{0}.txt".format(i)  
-  if os.path.isfile(file_freespace) and os.path.isfile(file_ground):
-    print '*** Antenna',i,xants[i],yants[i],zants[i]
-    
-    #if np.any(isout == i):  #Skip antenna for which no attenuation was computed
-    #  print "Skip antenna",i
-    #  continue
-    #Vpp_0 = display(file_freespace)
-    Vpp_0 = attenuate(file_freespace,att[i,:])
-    
-    #Vfpp_0 = filt(file_freespace)  # Skip filtering for now
-    Vfpp_0 = Vpp_0
-    
-    g = np.loadtxt(file_ground)
-    Vpp_g = display(file_ground)
-    #Vfpp_g = filt(file_ground)
-    Vfpp_g = Vpp_g
+  # Set target path
+  evtpath = "/home/martineau/GRAND/GRAND/data/massProd/flat/"
+  jsonf = evtpath+target+".voltage.json"
+  attf = evtpath+target+".att"
+  tarf =  evtpath+target+".tgz"
 
-    #print Vfpp_0[0],Vfpp_0[1],Vfpp_0[2],Vfpp_g[0],Vfpp_g[1],Vfpp_g[2]
-    #raw_input()
-    res.append([xants[i],yants[i],zants[i],Vfpp_0[0],Vfpp_0[1],Vfpp_0[2],Vfpp_g[0],Vfpp_g[1],Vfpp_g[2]])
-        
+  if os.path.isfile(tarf):
+    # Unpack tar file with traces
+    print "Extracting",tarf
+    tar = tarfile.open(tarf, "r:gz")
+    tar.extractall(path=evtpath)
+    tar.close()
+    print "Done."
   else:
-    print "No voltage for antenna",i  
- 
- 
-res = np.array(res)
-xall = res[:,0]
-yall = res[:,1]
-Af_ns = res[:,3]
-Af_ew = res[:,4]
-Af_v = res[:,5]
-Ag_ns = res[:,6]
-Ag_ew = res[:,7]
-Ag_v = res[:,8]
-
-doScatterCol(xall/1e3,yall/1e3,Af_ns,xlab='SN (km)',ylab='EW (km)',clab='AmpNS ($\mu V$)')
-pl.title('Free space - NS')
-doScatterCol(xall/1e3,yall/1e3,Af_ew,xlab='SN (km)',ylab='EW (km)',clab='AmpEW ($\mu V$)')
-pl.title('Free space - EW')
-doScatterCol(xall/1e3,yall/1e3,Af_v,xlab='SN (km)',ylab='EW (km)',clab='AmpVert ($\mu V$)')
-pl.title('Free space - Vert')
-
-doScatterCol(xall/1e3,yall/1e3,Ag_ns,xlab='SN (km)',ylab='EW (km)',clab='AmpNS ($\mu V$)')
-pl.title('Ground - NS')
-doScatterCol(xall/1e3,yall/1e3,Ag_ew,xlab='SN (km)',ylab='EW (km)',clab='AmpEW ($\mu V$)')
-pl.title('Ground - EW')
-doScatterCol(xall/1e3,yall/1e3,Ag_v,xlab='SN (km)',ylab='EW (km)',clab='AmpVert ($\mu V$)')
-pl.title('Ground - Vert')
-
-diffNS = (Af_ns-Ag_ns)/Ag_ns*100
-diffEW = (Af_ew-Ag_ew)/Ag_ew*100
-diffV = (Af_v-Ag_v)/Ag_v*100
+    print "No file",tarf,"! Abort."
+    return
     
-doScatterCol(xall/1e3,yall/1e3,diffNS,figId=88,xlab='SN (km)',ylab='EW (km)',clab='DiffNS (\%)')
-pl.title('Diff NS')
-doScatterCol(xall/1e3,yall/1e3,diffEW,figId=89,xlab='SN (km)',ylab='EW (km)',clab='DiffEW (\%)')
-pl.title('Diff EW')
-doScatterCol(xall/1e3,yall/1e3,diffV,figId=90,xlab='SN (km)',ylab='EW (km)',clab='DiffVert (\%)')
-pl.title('Diff Vert')
+  # Load attenuation
+  print "Loading attenuation table",attf
+  if os.path.isfile(attf):
+    attt = np.loadtxt(attf)
+    antid = attt[:,0]
+    att = attt[:,1:]
+  else:
+    print "No file",attf,"! Abort."
+    return
+  
+  # Now loop on events in json file (Should only be one)
+  for evt in EventIterator(jsonf):  
+    print "Now computing attenuated voltages"
+    voltage=[]
+    time_peaks=[]
+    # Now loop on all antennas
+    for i in range(int(max(antid))):
+ 
+      file_freespace = evtpath+target+"/out_{0}.txt".format(i)
+      if os.path.isfile(file_freespace):  # Voltage was computed
+    	res = attenuate(file_freespace,att[i,:])
+    	v_list = (i,round(res[1]-res[3],3),round(res[5]-res[7],3),round(res[9]-res[11],3),round(res[13]-res[15],3))
+    	voltage.append( v_list )
+    	time_peaks.append(res)
+ 
+    # Now write output to file
+    print "Now logging results to",jsonf
+    log_event = EventLogger(path=jsonf)
+    # Add the additional informations to the shower event
+    evt['voltage'] = voltage # muV
+    evt['time_peaks'] = time_peaks # s, muV
+    log_event(**evt)
 
-pl.figure()
-pl.subplot(311)
-pl.hist(diffNS,100)
-print 'NS:',np.mean(diffNS),np.std(diffNS)
-pl.subplot(312)
-pl.hist(diffEW,100)
-print 'EW:',np.mean(diffEW),np.std(diffEW)
-pl.subplot(313)
-pl.hist(diffV,100)
-print 'Vert:',np.mean(diffV),np.std(diffV)
+  print "  --> Done in {:.1f} s".format(time.time() - t0)
 
-raw_input()
+
+   
+if __name__ == "__main__":
+    print "Usage: >python computeAttenuatedResponse.py <ID of target event>"
+    process(sys.argv[1])
