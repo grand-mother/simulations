@@ -10,7 +10,7 @@ import pylab as pl
 from scipy.interpolate import interp1d
 from scipy.fftpack import rfft, irfft, rfftfreq            
 
-CC = 1
+CC = 0
 if CC==1:
   RETRODIR = "/pbs/throng/trend/soft/sim/GRANDsim/retro/"
 else:
@@ -132,10 +132,10 @@ def process(jsonpath,attpath=None,tarpath=None):
       time_peaks=[]
       # Now loop on all antennas
       for i in range(int(max(antid))):
- 
-  	file_freespace = untardir+target+"/out_{0}.txt".format(i)
-  	if os.path.isfile(file_freespace):  # Voltage was computed
-  	  res = attenuate(file_freespace,att[i,:])
+        
+  	file_freespace = untardir+"/"+target+"/out_{0}.txt".format(i)
+	if os.path.isfile(file_freespace):  # Voltage was computed
+	  res = attenuate(file_freespace,att[i,:])
   	  v_list = (i,round(res[1]-res[3],3),round(res[5]-res[7],3),round(res[9]-res[11],3),round(res[13]-res[15],3))
   	  voltage.append( v_list )
   	  time_peaks.append(res)
