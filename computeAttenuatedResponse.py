@@ -10,7 +10,7 @@ import pylab as pl
 from scipy.interpolate import interp1d
 from scipy.fftpack import rfft, irfft, rfftfreq            
 
-CC = 0
+CC = 1
 if CC==1:
   RETRODIR = "/pbs/throng/trend/soft/sim/GRANDsim/retro/"
 else:
@@ -78,6 +78,7 @@ def attenuate(f,attdB):
     imax = np.argmax(vcom,axis=0)
     imin = np.argmin(vcom,axis=0)
     res = res+[t[imax],vcom[imax],t[imin],vcom[imin]]
+    print res
     return res
 
 
@@ -134,7 +135,9 @@ def process(jsonpath,attpath=None,tarpath=None):
       for i in range(int(max(antid))):
         
   	file_freespace = untardir+"/"+target+"/out_{0}.txt".format(i)
+	print file_freespace
 	if os.path.isfile(file_freespace):  # Voltage was computed
+	  print "ok"
 	  res = attenuate(file_freespace,att[i,:])
   	  v_list = (i,round(res[1]-res[3],3),round(res[5]-res[7],3),round(res[9]-res[11],3),round(res[13]-res[15],3))
   	  voltage.append( v_list )
