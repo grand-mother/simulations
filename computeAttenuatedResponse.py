@@ -25,6 +25,7 @@ exclude = "/usr/local/python/python-2.7/lib/python2.7/site-packages"
 sys.path = [v for v in sys.path if not (exclude in v)]
 
 
+
 def attenuate(f,attdB):
     
     # Compute attenuation coefs
@@ -77,7 +78,6 @@ def attenuate(f,attdB):
     imax = np.argmax(vcom,axis=0)
     imin = np.argmin(vcom,axis=0)
     res = res+[t[imax],vcom[imax],t[imin],vcom[imin]]
-    print res
     return res
 
 
@@ -134,9 +134,7 @@ def process(jsonpath,attpath=None,tarpath=None):
       for i in range(int(max(antid))):
         
   	file_freespace = untardir+"/"+target+"/out_{0}.txt".format(i)
-	print file_freespace
 	if os.path.isfile(file_freespace):  # Voltage was computed
-	  print "ok"
 	  res = attenuate(file_freespace,att[i,:])
   	  v_list = (i,round(res[1]-res[3],3),round(res[5]-res[7],3),round(res[9]-res[11],3),round(res[13]-res[15],3))
   	  voltage.append( v_list )

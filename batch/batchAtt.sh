@@ -38,6 +38,5 @@
 
 #===============================================================================
 
-outdir=
 python /pbs/throng/trend/soft/sim/GRANDsim/simulations/computeAttenuation.py $1
 cp *.att /sps/hep/trend/omartino/production/GRAND/.

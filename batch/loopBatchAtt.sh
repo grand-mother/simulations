@@ -1,8 +1,9 @@
 batchpath=/pbs/throng/trend/soft/sim/GRANDsim/simulations/batch
-target=/sps/hep/trend/omartino/GRAND/voltageOutput/flat/flat_freespace
+#target=/sps/hep/trend/omartino/GRAND/voltageOutput/flat/flat_freespace
+target=/sps/hep/trend/omartino/GRAND/voltageOutput/hotspot-150x67km2/HS1_freespace
 jsonpath=$target/jsons
 outdir=/sps/hep/trend/omartino/production/GRAND
-# First buil dlist of showers already treated
+# First build list of showers already treated
 cd $outdir
 rm done.txt
 done=`ls *.att`
@@ -51,10 +52,10 @@ fi
 
 
 ## Now launch batches
-#cd $batchpath
-#batchdirs=`ls -d $jsonpath/batch*`
-#for batchdir in $batchdirs
-#do
-#  qsub -P P_trend $batchpath/batchAtt.sh $batchdir
-#done
+cd $batchpath
+batchdirs=`ls -d $jsonpath/batch*`
+for batchdir in $batchdirs
+do
+  qsub -P P_trend $batchpath/batchAtt.sh $batchdir
+done
 

@@ -1,8 +1,8 @@
 batchpath=/pbs/throng/trend/soft/sim/GRANDsim/simulations/batch
-target=/sps/hep/trend/omartino/GRAND/voltageOutput/flat/flat_freespace
+#target=/sps/hep/trend/omartino/GRAND/voltageOutput/flat/flat_freespace
+target=/sps/hep/trend/omartino/GRAND/voltageOutput/hotspot-150x67km2/HS1_freespace
 jsonpath=$target/jsons
 outdir=/sps/hep/trend/omartino/production/GRAND
-
 
 # First buil dlist of showers already treated
 cd $outdir

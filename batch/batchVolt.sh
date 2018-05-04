@@ -59,11 +59,14 @@ for json in $jsons
     lat=${json:19:2}
     long=${json:25:2} 
   fi
+  tardir=/sps/hep/trend/omartino/GRAND/voltageOutput/hotspot-150x67km2/HS1_freespace
   tarfile=La$lat'_Lo'$long/E$E/Z$th/A$phi/*.tgz
-  truetarfile=/sps/hep/trend/omartino/GRAND/voltageOutput/flat/flat_freespace/$tarfile
+  truetarfile=$tardir/$tarfile
   cp $truetarfile $jsondir
 done
-attdir=/sps/hep/trend/omartino/GRAND/attFiles/flat/
+
+#attdir=/sps/hep/trend/omartino/GRAND/attFiles/flat/
+attdir=/sps/hep/trend/omartino/GRAND/attFiles/HS1/
 
 # Now run job
 python /pbs/throng/trend/soft/sim/GRANDsim/simulations/computeAttenuatedResponse.py $jsondir $attdir $jsondir/
