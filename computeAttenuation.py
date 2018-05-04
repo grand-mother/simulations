@@ -6,7 +6,7 @@ import time
 import modules
 import numpy as np
 DISPLAY = 0
-CC = 1
+CC = 0
 if DISPLAY:
   import matplotlib.pyplot as pl
   import matplotlib.colors as colors
@@ -112,7 +112,6 @@ def compute_ray(r0, r1, lam):
 # RMS offset to plane traj between source and antenna (m)
     
     global flat
-    #flat = False
     v = r1-r0
     if np.linalg.norm(v)>76000:  # Working only on antenna closer than 76km from Xmax
       #print "Xmax too far"
@@ -143,27 +142,39 @@ def compute_ray(r0, r1, lam):
     if DISPLAY:
       pl.ion()
       pl.figure()
-      pl.subplot(211)
+      pl.subplot(311)
       pl.plot(s, zt, "k")
       pl.plot(s, zr, "k--")
       pl.title('Antenna position {0} {1} {2}'.format(r1[0],r1[1],r1[2]))
-      pl.subplot(212)
+      pl.ylabel('Altitude asl (m)')
+      pl.subplot(312)
       pl.plot(s, -dalt, "k+-")
       pl.plot(s, -R, "b+-")
       pl.plot(s[diffa], -R[diffa], "r+-")
+      pl.ylabel('-R,-dalt (m)')
       pl.grid(True)
+      pl.subplot(313)
+      pl.plot(s, R-dalt, "k+-")
+      pl.grid(True)
+      pl.xlabel('Distance to Xmax (m)')
+      pl.ylabel('R-dalt (m)')
       pl.show() 
-      raw_input()
+      #raw_input()
 	
     if np.sum(diffa)<1:  # Always flying
-      #print 'Always flying'
+      if DISPLAY: 
+        print 'Always flying'
+	raw_input()
       return 0, 0, -1000, 0, 0
 
     
     diffInd = np.where(R>dalt)[0]
-    continuous =  np.sum(np.diff(diffInd)>3)<1 # Check if continuous - Allow up to one 3*100=300m discontinuity only
-    #print diffInd,np.diff(diffInd)>2,continuous
-    if continuous and (diffInd[-1]-len(R))<2:  # Continuous Fresnel range + ending at the antenna 
+    #print np.diff(diffInd)
+    continuous =  np.sum(np.diff(diffInd[1::])>3)<2 # Check if continuous - Allow up to one 3*100=300m discontinuity only
+    if DISPLAY:
+      print "1st point in range, last point in range, continuous",s[diffInd[0]],s[-1],continuous
+      raw_input()
+    if continuous and (diffInd[-1]-len(R))<3:  # Continuous Fresnel range + ending at the antenna 
       fir = diffInd[0]  # First point of Fresnel range
       dFresnelRange = s[-1]-s[fir]  # Range where diffraction effects come into play: 
       aFlat = (zt[-1]-zt[fir])/dFresnelRange
@@ -240,7 +251,6 @@ def fresnel(event):
       for j in range(len(lam)):
  	# Determine Fresnel range
  	r, f, a, m, s= compute_ray(r1,ra[i, :],lam[j]) # Ray is along line of sigth from Xmax to antenna
- 	#print r, m, s, a
  
  	if r is None: # Antenna is to far
 	  break  
@@ -260,14 +270,15 @@ def fresnel(event):
  	dBAtt[0,j] = dbAtt2
 	
       dBAtt = np.insert(dBAtt,0,int(i))
-      #print dBAtt
+      if DISPLAY == 1:
+        print 'Range,Att:',r,dBAtt
       np.savetxt(fid, dBAtt[np.newaxis],fmt="%s",delimiter=' ',newline='\n')
       
 def process(path):
     """Summarise a set of event files"""
     global origin, topo, flat 
     origin, topo = None, None
-    flat = True # Use topography of flat ground (with Earth curvature)
+    flat = False # Use topography of flat ground (with Earth curvature)
     print "*** Warning: flat=",flat
     for name in os.listdir(path):
         if not name.endswith("json"):

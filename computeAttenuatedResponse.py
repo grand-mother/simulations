@@ -25,7 +25,6 @@ exclude = "/usr/local/python/python-2.7/lib/python2.7/site-packages"
 sys.path = [v for v in sys.path if not (exclude in v)]
 
 
-
 def attenuate(f,attdB):
     
     # Compute attenuation coefs
