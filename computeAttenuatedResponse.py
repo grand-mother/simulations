@@ -10,7 +10,7 @@ import pylab as pl
 from scipy.interpolate import interp1d
 from scipy.fftpack import rfft, irfft, rfftfreq            
 
-CC = 1
+CC = 0
 if CC==1:
   RETRODIR = "/pbs/throng/trend/soft/sim/GRANDsim/retro/"
 else:
@@ -25,7 +25,48 @@ exclude = "/usr/local/python/python-2.7/lib/python2.7/site-packages"
 sys.path = [v for v in sys.path if not (exclude in v)]
 
 
+FREQMIN = 50e6
+FREQMAX = 200e6
 
+def butter_bandpass(lowcut, highcut, fs, order):
+    nyq = 0.5 * fs
+    low = lowcut / nyq
+    high = highcut / nyq
+    b, a = butter(order, [low, high], btype='band')
+    return b, a
+
+def butter_bandpass_filter(data, lowcut, highcut, fs, order):
+    b, a = butter_bandpass(lowcut, highcut, fs, order)
+    y = lfilter(b, a, data)
+    return y
+
+def Filtering(x,fs,lowcut,highcut):
+    return butter_bandpass_filter(x, lowcut, highcut, fs, order=5)
+
+
+def filt(f):
+    #testFiltering()
+    d = np.loadtxt(f)
+    t = d[:,0]
+    ns = d[:,1]
+    ew = d[:,2]
+    vert = d[:,3]
+    t = (t-t[0])*1e9 #ns
+    tstep=1e-9  #s
+    fs = 1/tstep
+    nsf = Filtering(ns,fs,FREQMIN,FREQMAX)
+    ewf = Filtering(ew,fs,FREQMIN,FREQMAX)
+    vertf = Filtering(vert,fs,FREQMIN,FREQMAX)
+    
+    if 0:
+      pl.plot(t,nsf,'--b')
+      pl.plot(t,ewf,'--g')
+      pl.plot(t,vertf,'--r')
+    
+    return np.array([max(nsf)-min(nsf),max(ewf)-min(ewf),max(vertf)-min(vertf)])
+    
+    
+    
 def attenuate(f,attdB):
     
     # Compute attenuation coefs
@@ -73,7 +114,11 @@ def attenuate(f,attdB):
  	 pl.xlabel("Frequency (MHz)")
  	 pl.ylabel("FFT")
  	 pl.xlim([0, 300])
-	 
+    
+       # Now filter
+       fs = 1/dt
+       vout[:,i-1]  = Filtering(vout[:,i-1],fs,FREQMIN,FREQMAX)
+
     vcom = vout[:,1]+vout[:,2] 
     imax = np.argmax(vcom,axis=0)
     imin = np.argmin(vcom,axis=0)
