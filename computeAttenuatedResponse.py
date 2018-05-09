@@ -8,8 +8,10 @@ import tarfile
 import numpy as np
 import pylab as pl
 from scipy.interpolate import interp1d
+from scipy.signal import butter, lfilter
 from scipy.fftpack import rfft, irfft, rfftfreq            
 
+DISPLAY = 0
 CC = 0
 if CC==1:
   RETRODIR = "/pbs/throng/trend/soft/sim/GRANDsim/retro/"
@@ -58,11 +60,6 @@ def filt(f):
     ewf = Filtering(ew,fs,FREQMIN,FREQMAX)
     vertf = Filtering(vert,fs,FREQMIN,FREQMAX)
     
-    if 0:
-      pl.plot(t,nsf,'--b')
-      pl.plot(t,ewf,'--g')
-      pl.plot(t,vertf,'--r')
-    
     return np.array([max(nsf)-min(nsf),max(ewf)-min(ewf),max(vertf)-min(vertf)])
     
     
@@ -98,13 +95,14 @@ def attenuate(f,attdB):
        
        imax = np.argmax(vout[:,i-1],axis=0)
        imin = np.argmin(vout[:,i-1],axis=0)
-       res = res+[t[imax],vout[imax,i-1],t[imin],vout[imin,i-1]]
        
-       if 0:      
+       if DISPLAY: 
+         col = ['b','g','r']   
+	 t = (t-t[0])*1e9  
  	 pl.figure()
  	 pl.subplot(211)
- 	 pl.plot(t,v)
- 	 pl.plot(t,vout[:,i-1])
+ 	 pl.plot(t,v,label='Free')
+ 	 pl.plot(t,vout[:,i-1],label='Attenuated')
  	 pl.xlabel("Time (ns)")
  	 pl.ylabel("Voltage ($\mu$V)")
  	 pl.xlim([0, max(t)])
@@ -118,7 +116,16 @@ def attenuate(f,attdB):
        # Now filter
        fs = 1/dt
        vout[:,i-1]  = Filtering(vout[:,i-1],fs,FREQMIN,FREQMAX)
-
+       res = res+[t[imax],vout[imax,i-1],t[imin],vout[imin,i-1]]
+    
+       if DISPLAY:
+	 print "Channel, Vpp",i-1,vout[imax,i-1]-vout[imin,i-1]
+         pl.subplot(211)
+         pl.plot(t,vout[:,i-1],label='Filtered')
+	 pl.legend(loc='best')
+	 pl.show()
+	 raw_input()
+	 
     vcom = vout[:,1]+vout[:,2] 
     imax = np.argmax(vcom,axis=0)
     imin = np.argmin(vcom,axis=0)
