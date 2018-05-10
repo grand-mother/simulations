@@ -136,7 +136,8 @@ def compute_ray(r0, r1, lam):
           #print i,xi,yi,zi,zt[i]
         else:
 	  zt[i] = topo.ground_altitude(xi, yi)
-          dalt[i] = zr[i]-zt[i]-20  # Ray height above ground (approx: ray height = CM-R_T in principle!!!)
+          #dalt[i] = zr[i]-zt[i]-20  # 20m ground offset added for flat array
+	  dalt[i] = zr[i]-zt[i]
     diffa = R>dalt # diffraction area
 
     if DISPLAY:
@@ -170,11 +171,15 @@ def compute_ray(r0, r1, lam):
     
     diffInd = np.where(R>dalt)[0]
     #print np.diff(diffInd)
-    continuous =  np.sum(np.diff(diffInd[1::])>3)<2 # Check if continuous - Allow up to one 3*100=300m discontinuity only
+    #continuous =  np.sum(np.diff(diffInd[1::])>2)<1 # Check if continuous - Allow up to one 3*100=300m discontinuity only / v0
+    #continuous =  np.sum(np.diff(diffInd[1::])>3)<2 # Check if continuous - Allow up to two 3*100=300m discontinuity only / v1  !!! Warning!!! One very long discontinuity is possible...
+    continuous =  np.sum(np.diff(diffInd[1::])>5)<1 # Check if continuous - Allow up to one 4*100=400m discontinuity only / v2
     if DISPLAY:
       print "1st point in range, last point in range, continuous",s[diffInd[0]],s[-1],continuous
       raw_input()
-    if continuous and (diffInd[-1]-len(R))<3:  # Continuous Fresnel range + ending at the antenna 
+    #if continuous and (diffInd[-1]-len(R))<2:  # Continuous Fresnel range + ending at the antenna 
+    #if continuous and (diffInd[-1]-len(R))<3:  # Continuous Fresnel range + ending at the antenna 
+    if continuous and (diffInd[-1]-len(R))<5:  # Continuous Fresnel range + ending at the antenna 
       fir = diffInd[0]  # First point of Fresnel range
       dFresnelRange = s[-1]-s[fir]  # Range where diffraction effects come into play: 
       aFlat = (zt[-1]-zt[fir])/dFresnelRange
