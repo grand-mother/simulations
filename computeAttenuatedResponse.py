@@ -11,7 +11,7 @@ from scipy.interpolate import interp1d
 from scipy.signal import butter, lfilter
 from scipy.fftpack import rfft, irfft, rfftfreq            
 
-DISPLAY = 0
+DISPLAY = 1
 CC = 0
 if CC==1:
   RETRODIR = "/pbs/throng/trend/soft/sim/GRANDsim/retro/"
@@ -97,6 +97,7 @@ def attenuate(f,attdB):
        imin = np.argmin(vout[:,i-1],axis=0)
        
        if DISPLAY: 
+	 print "Channel, Vpp attenuated",i-1,vout[imax,i-1]-vout[imin,i-1]
          col = ['b','g','r']   
 	 t = (t-t[0])*1e9  
  	 pl.figure()
@@ -116,10 +117,12 @@ def attenuate(f,attdB):
        # Now filter
        fs = 1/dt
        vout[:,i-1]  = Filtering(vout[:,i-1],fs,FREQMIN,FREQMAX)
+       imax = np.argmax(vout[:,i-1],axis=0)
+       imin = np.argmin(vout[:,i-1],axis=0)       
        res = res+[t[imax],vout[imax,i-1],t[imin],vout[imin,i-1]]
     
        if DISPLAY:
-	 print "Channel, Vpp",i-1,vout[imax,i-1]-vout[imin,i-1]
+	 print "Channel, Vpp filtered",i-1,vout[imax,i-1]-vout[imin,i-1]
          pl.subplot(211)
          pl.plot(t,vout[:,i-1],label='Filtered')
 	 pl.legend(loc='best')
