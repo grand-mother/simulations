@@ -12,7 +12,7 @@ from scipy.signal import butter, lfilter
 from scipy.fftpack import rfft, irfft, rfftfreq            
 
 DISPLAY=False
-CC = 1
+CC = 0
 if CC==1:
   RETRODIR = "/pbs/throng/trend/soft/sim/GRANDsim/retro/"
 else:
@@ -156,7 +156,7 @@ def attenuate(f,attdB):
 
 
 def process(jsonpath,attpath=None,tarpath=None):
-  doAtt = False
+  doAtt = True
   untardir = "./tmp"
   try:
     os.stat(untardir)
