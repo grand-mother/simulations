@@ -1,10 +1,14 @@
-batchpath=/pbs/throng/trend/soft/sim/GRANDsim/simulations/batch
+#!/bin/bash
+
 #target=/sps/hep/trend/omartino/GRAND/voltageOutput/flat/flat_freespace
 target=/sps/hep/trend/omartino/GRAND/voltageOutput/hotspot-150x67km2/HS1_freespace
 jsonpath=$target/jsons
 outdir=/sps/hep/trend/omartino/production/GRAND
+batchpath=/pbs/throng/trend/soft/sim/GRANDsim/simulations/batch
 
-# First buil dlist of showers already treated
+echo "##### Run on CentOs7!!!!"
+
+# First build list of showers already treated
 cd $outdir
 rm done.txt
 done=`ls *.json`
@@ -12,7 +16,6 @@ for i in $done
      do    
      echo $i 
      ID=${i::-13}
-     echo $ID
      echo $ID >> done.txt
 done
 
@@ -50,14 +53,17 @@ if [ 1 -gt 0 ]  #
      fi
    done
 fi
-#
 
+echo "Done with batch construction"
+sleep 10
 
-## Now launch batches
-cd $batchpath
-batchdirs=`ls -d $jsonpath/batch*`
-for batchdir in $batchdirs
-do
-  qsub -P P_trend $batchpath/batchVolt.sh $batchdir
-done
-
+if [ 1 -gt 0 ]  # 
+  then
+  # Now launch batches
+  cd $batchpath
+  batchdirs=`ls -d $jsonpath/batch*`
+  for batchdir in $batchdirs
+  do
+    qsub -P P_trend $batchpath/batchVolt.sh $batchdir
+  done
+fi

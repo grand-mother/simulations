@@ -69,7 +69,7 @@ done
 attdir=/sps/hep/trend/omartino/GRAND/attFiles/HS1/
 
 # Now run job
-python /pbs/throng/trend/soft/sim/GRANDsim/simulations/computeAttenuatedResponse.py $jsondir $attdir $jsondir/
+python /pbs/throng/trend/soft/sim/GRANDsim/simulations/computeFiltResponse.py $jsondir $attdir $jsondir/
 
 # Now copy output to result dir
 cp *.json /sps/hep/trend/omartino/production/GRAND/.
