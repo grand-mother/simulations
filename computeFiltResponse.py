@@ -80,7 +80,14 @@ def filt(f=None,d=None):
         pl.legend(loc='best')
         pl.show()
         raw_input()
-
+    
+    if nCh==3:  # We have X,Y,Z channels == we can compute X+Y response
+      # Combined X+Y channel
+      vcom = vout[:,1]+vout[:,2] 
+      imax = np.argmax(vcom,axis=0)
+      imin = np.argmin(vcom,axis=0)
+      res = res+[t[imax],vcom[imax],t[imin],vcom[imin]]
+      
     return np.array(res)
 
     
@@ -149,6 +156,7 @@ def attenuate(f,attdB):
 
 
 def process(jsonpath,attpath=None,tarpath=None):
+  doAtt = False
   untardir = "./tmp"
   try:
     os.stat(untardir)
@@ -182,30 +190,38 @@ def process(jsonpath,attpath=None,tarpath=None):
       print "No file",tarf,"! Abort."
       continue
  
-    # Load attenuation
-    print "Loading attenuation table",attf
-    if os.path.isfile(attf):
-      attt = np.loadtxt(attf)
-      antid = attt[:,0]
-      att = attt[:,1:]
+    if doAtt:
+      # Load attenuation
+      print "Loading attenuation table",attf
+      if os.path.isfile(attf):
+        attt = np.loadtxt(attf)
+        antid = attt[:,0]
+        att = attt[:,1:]
+        print "Done."
+      else:
+        print "No file",attf,"! Abort."
+        #continue
     else:
-      print "No file",attf,"! Abort."
-      continue
-
+        print "No attenuation considered in this treatment because doAtt=",doAtt
+	
     # Now loop on events in json file (Should only be one)
     for evt in EventIterator(jsonf):
-      print "Now computing attenuated+filtered voltages"
+      ants = np.array(evt["antennas"])
+      nAnts = len(ants)
+      
+      print "Now computing attenuated + filtered voltages"
       voltage=[]
       time_peaks=[]
       # Now loop on all antennas
-      for i in range(int(max(antid))):
+      for i in range(nAnts):
   	file_freespace = untardir+"/"+target+"/out_{0}.txt".format(i)
 	if os.path.isfile(file_freespace):  # Voltage file exists
-	  if att is None: # No attenuation used
-	    res = attenuate(file_freespace,0)
-	  else:
+	  if doAtt:
 	    res = attenuate(file_freespace,att[i,:])
-  	  res[np.isnan(res)] = 0;
+	  else:
+	    res = filt(file_freespace)
+	  
+	  res[np.isnan(res)] = 0;
 	  v_list = (i,round(res[1]-res[3],3),round(res[5]-res[7],3),round(res[9]-res[11],3),round(res[13]-res[15],3))
 	  voltage.append( v_list )
   	  time_peaks.append(list(res))
