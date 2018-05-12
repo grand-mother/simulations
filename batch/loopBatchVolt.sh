@@ -17,7 +17,7 @@ for i in $done
 done
 
 # Now create json files subdirs for batches
-if [ -1 -gt 0 ]  # 
+if [ 1 -gt 0 ]  # 
    then
    cd $jsonpath
    rm -rf batch*

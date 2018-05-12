@@ -12,7 +12,7 @@ from scipy.signal import butter, lfilter
 from scipy.fftpack import rfft, irfft, rfftfreq            
 
 DISPLAY=False
-CC = 0
+CC = 1
 if CC==1:
   RETRODIR = "/pbs/throng/trend/soft/sim/GRANDsim/retro/"
 else:
