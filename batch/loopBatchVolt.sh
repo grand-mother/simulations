@@ -1,7 +1,8 @@
 #!/bin/bash
 
 #target=/sps/hep/trend/omartino/GRAND/voltageOutput/flat/flat_freespace
-target=/sps/hep/trend/omartino/GRAND/voltageOutput/hotspot-150x67km2/HS1_freespace
+#target=/sps/hep/trend/omartino/GRAND/voltageOutput/hotspot-150x67km2/HS1_freespace
+target=/sps/hep/trend/omartino/GRAND/voltageOutput/hotspot-150x67km2/HS1_ground
 jsonpath=$target/jsons
 outdir=/sps/hep/trend/omartino/production/GRAND
 batchpath=/pbs/throng/trend/soft/sim/GRANDsim/simulations/batch
@@ -55,7 +56,7 @@ if [ 1 -gt 0 ]  #
 fi
 
 echo "Done with batch construction"
-sleep 10
+sleep 3
 
 if [ 1 -gt 0 ]  # 
   then
