@@ -73,6 +73,7 @@ for json in $jsons
   ln -s $truetarfile $jsondir/$tarfile
 done
 
+cd $jsondir
 # Now run job
 python /pbs/throng/trend/soft/sim/GRANDsim/simulations/computeFiltResponse.py $jsondir $attdir $jsondir/
 
