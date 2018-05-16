@@ -27,8 +27,8 @@ exclude = "/usr/local/python/python-2.7/lib/python2.7/site-packages"
 sys.path = [v for v in sys.path if not (exclude in v)]
 
 
-FREQMIN = 50e6
-FREQMAX = 200e6
+FREQMIN = 70e6
+FREQMAX = 150e6
 
 def butter_bandpass(lowcut, highcut, fs, order):
     nyq = 0.5 * fs

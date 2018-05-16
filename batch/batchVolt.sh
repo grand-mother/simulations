@@ -39,8 +39,8 @@
 #===============================================================================
 
 # First fetch 3 input files
-#tardir=/sps/hep/trend/omartino/GRAND/voltageOutput/hotspot-150x67km2/HS1_freespace
-tardir=/sps/hep/trend/omartino/GRAND/voltageOutput/hotspot-150x67km2/HS1_ground
+tardir=/sps/hep/trend/omartino/GRAND/voltageOutput/hotspot-150x67km2/HS1_freespace
+#tardir=/sps/hep/trend/omartino/GRAND/voltageOutput/hotspot-150x67km2/HS1_ground
 #attdir=/sps/hep/trend/omartino/GRAND/attFiles/flat/
 attdir=/sps/hep/trend/omartino/GRAND/attFiles/HS1/
 jsondir=$1  # Folder containing json files

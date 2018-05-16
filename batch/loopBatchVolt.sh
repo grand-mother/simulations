@@ -1,8 +1,8 @@
 #!/bin/bash
 
 #target=/sps/hep/trend/omartino/GRAND/voltageOutput/flat/flat_freespace
-#target=/sps/hep/trend/omartino/GRAND/voltageOutput/hotspot-150x67km2/HS1_freespace
-target=/sps/hep/trend/omartino/GRAND/voltageOutput/hotspot-150x67km2/HS1_ground
+target=/sps/hep/trend/omartino/GRAND/voltageOutput/hotspot-150x67km2/HS1_freespace
+#target=/sps/hep/trend/omartino/GRAND/voltageOutput/hotspot-150x67km2/HS1_ground
 jsonpath=$target/jsons
 outdir=/sps/hep/trend/omartino/production/GRAND
 batchpath=/pbs/throng/trend/soft/sim/GRANDsim/simulations/batch
@@ -21,7 +21,7 @@ for i in $done
 done
 
 # Now create json files subdirs for batches
-if [ -1 -gt 0 ]  # 
+if [ 1 -gt 0 ]  # 
    then
    cd $jsonpath
    rm -rf batch*
