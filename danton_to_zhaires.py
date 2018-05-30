@@ -25,7 +25,7 @@ from mpl_toolkits.mplot3d import Axes3D
 
 ##################################################################
 # Define a few systematic variables
-part_dic={'221.0':'eta','211.0': 'pi+', '-211.0': 'pi-','111.0': 'pi0', '22.0':'gamma', '13.0':'muon', '11.0': 'electron', '15.0':'tau', '16.0':'nu(t)', '321.0': 'K+', '-321.0': 'K-','130.0':'K0L', '310.0':'K0S','-323.0':'K*+'}
+part_dic={'221.0':'eta','211.0': 'pi+', '-211.0': 'pi-','111.0': 'pi0', '22.0':'gamma', '13.0':'muon', '11.0': 'electron', '15.0':'tau', '16.0':'nu(t)', '321.0': 'K+', '-321.0': 'K-','130.0':'K0L', '310.0':'K0S','-323.0':'K+'} #'-323.0':'K*+' in reality
 GEOMAGNET = (56.5, 63.18, 2.72) # Geomagnetic field (Amplitude [uT], inclination [deg], declination [deg]).
 GdAlt=1500. #Altitude of the array = Ground altitude [m]
 DISPLAY = False #True #To plot the 3D map of the radio array (in particular the selected antennas)
@@ -89,7 +89,7 @@ def main():
     #Output directory for ZHAireS results.
     DATAFS = work_dir+'/showerdata/'
     showerdata_file = DATAFS+os.path.splitext(os.path.basename(danton_lib))[0]+'-showerdata.txt'
-    inp_dir = work_dir+'/inp_D'+str(int(Dd))+'m_Z'+str(int(slope))+'deg_h'+str(int(hz))+'m_'+str(int(sep))+'m/'
+    inp_dir = work_dir+'/inp_D'+str(int(Dd))+'m_Z'+str(int(slope))+'deg_h'+str(int(hz))+'m_sep'+str(int(sep))+'m/'
     if not(os.path.isdir(DATAFS)):
         os.mkdir(DATAFS)
     if not(os.path.isdir(inp_dir)):
@@ -103,15 +103,14 @@ def main():
             for decay in event.decay:
                 ### Fill data arrays
                 [dataprod,depth,height,theta,azim,delta,et] = parse_build(event,decay,AZIMUTH,GdAlt)
-                data.append((event.id, decay.tau_f.energy, event.primary.energy, depth, height, theta, azim, delta, decay.generation,
-                    et, et/decay.tau_f.energy))  
+#                data.append((event.id, decay.tau_f.energy, event.primary.energy, depth, height, theta, azim, delta, decay.generation,et, et/decay.tau_f.energy))  
 
                 ### Save data arrays
                 neu_file = DATAFS + str(event.id)+'.part'    
                 np.savetxt(neu_file,dataprod,fmt='%d %d %1.2f %1.2f %1.2f %1.2f %1.2f %1.2f %1.2f %1.2f %1.2f %1.2f %1.2f' ,header="Neu-ID Prod-ID ux uy uz EProd ThetaProd Zenith-GRAND Azimuth_GRAND Height-above-sea-level Depth NuEner TauEner")  
                 
-    data = np.array(data)
-    np.savetxt(showerdata_file,data,fmt='%d %1.2f %1.2f %1.2f %1.2f %1.2f %1.2f %1.2f %1.2f %1.2f %1.1f', header="Id TauEnergy NeuEnergy  Depth Height-above-sea-level Zenith-GRAND Azimuth_GRAND Delta Generation  ProdEnergy  ")
+#    data = np.array(data)
+#    np.savetxt(showerdata_file,data,fmt='%d %1.2f %1.2f %1.2f %1.2f %1.2f %1.2f %1.2f %1.2f %1.2f %1.1f', header="Id TauEnergy NeuEnergy  Depth Height-above-sea-level Zenith-GRAND Azimuth_GRAND Delta Generation  ProdEnergy  ")
 
     print "+ {:} tau decays for {:} incoming neutrinos".format(len(data), lastid+1)
     print('******************************')
@@ -125,16 +124,23 @@ def main():
     ### Compute parameters for ZHAireS input files
     showers=glob.glob(DATAFS+'*.part')
     if DISPLAY:
-        shower_list=showers[1:6] #Choose some indices. Avoid diplaying the array for all the showers in the DANTON library.
+        casc_list = [1042568] #,1032842,7295104,1004977]  #
+        shower_list = [DATAFS+str(x)+'.part' for x in casc_list]
+        #shower_list=showers[5:8] #Choose some indices. Avoid diplaying the array for all the showers in the DANTON library.
     else:
         shower_list = showers
+        #casc_list = [104516,1000689,1002953,1003115,1004048,1004977,1005024,1008067,1008191,1010283,1011058,1011123,1011163,1013545,1016896,1017004,1017434,1028268,1030142,1031278,1031625,1032478,1032522,1032842,1039526,1042568,1042828,1043059,1043726,1044845,1048040,1048926,1049392,1051763,1052389,480810,9844645,9812379,1865533,4240585,2323198,7295104,432567,1059351,5358781,7226241,8754140,2393584,7690948,6009170,5342127,9553481,2814180,45262,9915833,514764,6057408,5899915,694299,912749,2859244,2957164,8196507,2763967,761128,2206154,3809709,3737664,6339509,674122,5201355,7459312,7639985,3415148,6260906,4433650,7544235,5782058,332003,4785612,1397618,2856973,4461832,8347095,5636691,3209962,7260688,8934694,7916608,9084503,5646886,2645922,1735083,6685712,9799366,3047398,2421753,6391772,2539258,232353]
+        #casc_list = np.loadtxt('/Users/nrenault/Desktop/GRAND/ToyModel/studied_showers_1E+10_1.txt', dtype='string', comments='#')
+        casc_list = np.loadtxt('/Users/nrenault/Desktop/GRAND/RadioMorphing/zhaires/run2/liste_EE1E+10_sel87.txt', dtype='string', comments='#')
+        shower_list = [DATAFS+str(x)+'.part' for x in casc_list]
+
     for fname in shower_list:
         [showerID,etot,azim,theta,multip,alt] = compute_shower_parameters(fname)
 
         if DISPLAY:
             print 'showerID = ',showerID,' Eshower = ',etot,' azimuth_GRAND = ',azim,' zenith_GRAND = ',theta,' injection height =',alt
 
-        fileZha = inp_dir+showerID+ '.inp'
+        fileZha = inp_dir+'D'+str(int(Dd))+'m-Z'+str(int(slope))+'deg-'+showerID+'.inp'
         dir=os.path.dirname(fileZha)
         if not os.path.exists(dir):
             os.makedirs(dir)
@@ -143,15 +149,21 @@ def main():
         CORE = random_array_pos(slope,sep)
 
         ### Reduce the radio array to the shower geometrical footprint (we account for a footprint twice larger than the Cherenkov angle)
-        ANTENNAS2 = reduce_antenna_array(alt,theta,ANTENNAS,CORE,DISPLAY)
+        #ANTENNAS2 = reduce_antenna_array(alt,theta,azim,ANTENNAS,CORE,DISPLAY)
+        ANTENNAS2 = reduce_antenna_array(alt,theta,0.,ANTENNAS,CORE,DISPLAY)
+
+        #'''
         if azim!=0.:
             ANTENNAS3 = rotate_antenna_array(ANTENNAS2,azim)
         else:
             ANTENNAS3 = np.copy(ANTENNAS2)
+        ANTENNAS2 = np.copy(ANTENNAS3)
+        #'''
+        
 
         ### Write the ZHAireS input file
         inpfile = open(fileZha,"w+")
-        totito  = generate_input(showerID, etot, azim, theta, multip, alt,ANTENNAS3)
+        totito  = generate_input(showerID, etot, azim, theta, multip, alt,ANTENNAS2)
         inpfile.write(totito)
         inpfile.close()
 
@@ -176,13 +188,14 @@ def array_display(ANTENNAS=None,datamap=None,title=None):
         zlbl='Z [m]'
 
         ax = pl.gca(projection='3d')
-        ax.scatter(ANTENNAS[:,0]*1.,ANTENNAS[:,1],ANTENNAS[:,2],c=datamap)
+        ax.scatter(ANTENNAS[:,0]*1.,ANTENNAS[:,1],c=datamap) #,ANTENNAS[:,2]
         ax.set_title(title)
         ax.view_init(25,-130)
         pl.xlabel(xlbl)
         pl.ylabel(ylbl)
         ax.set_zlabel(zlbl)
-        pl.gca().set_aspect(1,adjustable='box')
+        #pl.gca().set_aspect(1,adjustable='box')
+        pl.gca().set_aspect('auto')
 
         pl.show()
     return
@@ -308,11 +321,12 @@ def getCerenkovAngle(h=100e3):
     return alphac
 
 ##########################################################################################################
-def reduce_antenna_array(injh=None,theta=None,ANTENNAS=None,core=[0.,0.,0.],DISPLAY=False): 
+def reduce_antenna_array(injh=None,theta=None,phi=None,ANTENNAS=None,core=[0.,0.,0.],DISPLAY=False): 
     """ Reduce the size of the initialized radio array to the shower geometrical footprint by computing the angle between shower and decay-point-to-antenna axes """
     """ theta = zenith in ZHAireS convention [in deg], injh = injection height [in m] """
 
     zenr = np.radians(theta)
+    azimr = np.radians(phi)
     ANTENNAS1 = np.copy(ANTENNAS)
 
     # Shift antenna array with the randomized core position
@@ -321,9 +335,9 @@ def reduce_antenna_array(injh=None,theta=None,ANTENNAS=None,core=[0.,0.,0.],DISP
     ANTENNAS1[:,2] = ANTENNAS1[:,2]+core[2]
     
     # Compute angle between shower and decay-point-to-antenna axes
-    u_ant = ANTENNAS1+[0.,0.,-injh]
+    u_ant = ANTENNAS1-[0.,0.,injh]
     u_ant = (u_ant.T/np.linalg.norm(u_ant,axis=1)).T
-    u_sh = [np.sin(zenr),0.,np.cos(zenr)]
+    u_sh = np.array([np.cos(azimr)*np.sin(zenr), np.sin(azimr)*np.sin(zenr), np.cos(zenr)])
     ant_angle = np.arccos(np.matmul(u_ant, u_sh))
 
     # Remove antennas of the initial array that are located outside the "footprint"
@@ -331,7 +345,7 @@ def reduce_antenna_array(injh=None,theta=None,ANTENNAS=None,core=[0.,0.,0.],DISP
     angle_test = ant_angle<=omegar
     sel = np.where(angle_test)[0]
     ANTENNAS2 = ANTENNAS1[sel,:]
-
+    
     # Remove the farthest antennas to reduce the number of antenna positions to simulate so that this number falls below 1000
     while np.shape(sel)[0]>999:
         x_ant_max = np.max(ANTENNAS2[:,0])
@@ -345,7 +359,8 @@ def reduce_antenna_array(injh=None,theta=None,ANTENNAS=None,core=[0.,0.,0.],DISP
         ant_map_i[sel]=1.
         cc = np.zeros((np.size(ant_map_i),3))
         cc[np.where(ant_map_i==0),:]=[1,1,1]
-        #array_display(ANTENNAS,ant_angle,'Shower axis to decay point-antenna axis angle map')
+        ant_angle[ant_angle>omegar] = omegar
+        array_display(ANTENNAS,ant_angle,'Shower axis to decay point-antenna axis angle map')
         array_display(ANTENNAS1,cc,'Selected antenna map')
 
     return ANTENNAS2
@@ -356,7 +371,6 @@ def rotate_antenna_array(ANTENNAS=None,azim=0.):
     """ so that the longest side of the array is aligned with shower axis """
 
     azimr = np.radians(azim)
-    print azim
     if azimr>2*np.pi:
         azimr = azimr-2.*np.pi
     elif azimr<0.:
@@ -468,8 +482,7 @@ def compute_shower_parameters(fname=None):
         theta = datap[6]
         azim = datap[8]
         alt = datap[9]
-        #print alt
-        prop = 1.0e+09*datap[5]/etot
+        prop = np.round(1.0e+09*datap[5]/etot,2)
         multip.append([part_dic[str(part)],prop])
     else:
         part = datap[:,1]
@@ -477,10 +490,9 @@ def compute_shower_parameters(fname=None):
         theta = datap[0,6]
         azim = datap[0,8]
         alt = datap[0,9]
-        #print alt
-        prop = 1.0e+09*datap[:,5]/etot
+        prop = np.round(1.0e+09*datap[:,5]/etot,2)
         for i in range(0,len(datap)):
-            multip.append((part_dic[str(part[i])],prop[i]))
+            multip.append((part_dic[str(part[i])],str(prop[i])))
 
     return showerID,etot,azim,theta,multip,alt
 
@@ -520,6 +532,7 @@ def generate_input(task=0,energy=None, azimuth=None, zenith=None, products=None,
     ]
 
     for a in antennas:    
+        a[2] = a[2]-GdAlt
         stream.append("AddAntenna {:1.2f} {:1.2f} {:1.2f}".format(a[0],a[1],a[2]))
 
     stream += [
@@ -543,13 +556,18 @@ def generate_input(task=0,energy=None, azimuth=None, zenith=None, products=None,
         "#########################",
         "RLimsTables 10 m 10 km",
         "ELimsTables 2 MeV 1 TeV",
+        "ExportTables 5501",
+        "ExportTables 5501 Opt s",
         "ExportTables 5501 Opt a",
-        "ExportTables 1293 Opt a",
-        "ExportTables 1293 Opt as",
+        "ExportTables 5501 Opt as",
+        "ExportTable 1205",
+        "ExportTable 1205 Opt s",
         "ExportTable 1205 Opt a",
         "ExportTable 1205 Opt as",
-        "ExportTable 1793 Opt a",
-        "ExportTable 1793 Opt as",
+        #"ExportTables 1293 Opt a",
+        #"ExportTables 1293 Opt as",
+        #"ExportTable 1793 Opt a",
+        #"ExportTable 1793 Opt as",
         "########################",
         "ForceLowEDecay Never",
         "ForceLowEAnnihilation Never",
