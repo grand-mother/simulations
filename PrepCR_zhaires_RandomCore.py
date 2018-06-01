@@ -16,6 +16,10 @@ import subprocess
 import sys
 import time
 import numpy as np
+#import matplotlib #.pyplot as plt
+#matplotlib.rcParams['backend'] = "WXAgg"
+#matplotlib.use('TkAgg')
+#import matplotlib.pyplot as pl
 import pylab as pl
 import StringIO
 import random
@@ -24,8 +28,9 @@ from mpl_toolkits.mplot3d import Axes3D
 import modules
 
 GEOMAGNET = (56.5, 63.18, 2.72) #Geomagnetic field (Amplitude [uT], inclination [deg], declination [deg])
-GdAlt=1500. #1500. #array altitude in m
+GdAlt=1500. #array altitude in m
 Re= 6370949 # m, Earth radius
+MIN_ANTENNAS = 5
 
 ##########################################################################################################
 def main():
@@ -40,6 +45,10 @@ def main():
     The seed of each shower is uniformly randomized between 0 and 1.
     At the beginning of the script, you can set the altitude of the bottom of the array. By default GdAlt=1500 m
     The tables (pwr_EE, ZENITH and AZIMUTH) setting the energy, zenith and azimuth are, for now, hard coded and meant to be modified in the script.
+    If the direction and energy are set, the intersection point between the shower axis and ground is randomly chosen between
+    -draw_area_size and +draw_area_size around the array edges both in x and y directions. Then a selection of the antenna falling into the Cherenkov ring is done,
+    and the process is iterated until  more than MIN_ANTENNAS antennas are contained in the Cherenkov ring. The number of tries needed to meet
+    the criterion to get one event is recorded together with a bunch of informations about the shower and the array.
 
     Inputs :
         work_dir = directory where all ZHAireS input files and the simulation results will be stored.
@@ -54,7 +63,7 @@ def main():
         zeniths and azimuths (respectively in tables pwr_EE, ZENITH and AZIMUTH).
         They will located in the work_dir+"/inp/" directory.
 
-    Usage:  python PrepCR_zhaires.py work_dir slope height step Nx Ny
+    Usage:  python PrepCR_zhaires_RandomCore.py work_dir slope height step Nx Ny
 
     Notes:
         The global variable DISPLAY allows you to turn on/off the display of the 3D map of the radio array and the print-out of the processed showers
@@ -69,7 +78,7 @@ def main():
     # Retrieve the input parameters
     ROOT = "/home/renault/CRs/"
     output_folder=str(sys.argv[1])
-    DISPLAY = True #False #True
+    DISPLAY = False #True #
 
     ##################################################################
     # Array configuration parameters
@@ -81,48 +90,113 @@ def main():
 
     ##################################################################
     #Showers parameters
-    pwr_EE = np.array([18.],dtype=str) #np.array([17.5,18.,18.5,19.,19.5],dtype=str) #in eV
-    AZIMUTH = np.array([0.],dtype=float) #np.array([0.,45.,90.,135.,180.],dtype=float) #in degrees in GRAND convention
-    ZENITH = 180.-np.array([30.,65.,75.,85.],dtype=float) #180.-np.array([85.,80.,75.,70.,65.,60.],dtype=float) #in degrees in GRAND convention
+    pwr_EE = np.array([17.5,18.,18.5,19.,19.5],dtype=str) #in eV
+    AZIMUTH = np.array([0.,45.,90.,135.,180.],dtype=float) #in degrees in GRAND convention
+    ZENITH = 180.-np.array([85.,80.,75.,70.,65.,60.],dtype=float) #in degrees in GRAND convention
     injh = 100e3 #above sea level in m
+    draw_area_size = 50e3
 
     ##################################################################
     print('******************************')
     print os.getcwd()
 
-    Nit=0
+    # Compute an antenna array
     ANTENNAS=[]
     ANTENNAS=compute_antenna_pos(sep,nx,ny,GdAlt,slope)
-    for azim in AZIMUTH:
-        for zen in ZENITH:
-            for eny in pwr_EE:
-                task = 'EE1E'+eny+'-az'+str(int(azim))+'-zen'+str(int(zen))
-                ANTENNAS2 = np.copy(ANTENNAS)
+    print ANTENNAS
+    print np.amax(ANTENNAS[:,0]),np.amin(ANTENNAS[:,0])
+    print np.amax(ANTENNAS[:,1]),np.amin(ANTENNAS[:,1])
+    exit()
+    ### Reduce the radio array to the shower geometrical footprint (we account for a footprint twice larger than the Cherenkov angle)
+    CORE = random_array_pos(slope,sep) #[0.,0.,0.] #
+    ANTENNAS[:,0] = ANTENNAS[:,0]+CORE[0]
+    ANTENNAS[:,1] = ANTENNAS[:,1]+CORE[1]
+    ANTENNAS[:,2] = ANTENNAS[:,2]+CORE[2]
+    dx = draw_area_size + (np.amax(ANTENNAS[:,0])-np.amin(ANTENNAS[:,0]))/2
+    dy = draw_area_size + (np.amax(ANTENNAS[:,1])-np.amin(ANTENNAS[:,1]))/2
 
-                a = np.sqrt((Re + injh)**2. - (Re+GdAlt)**2*np.sin(np.pi-np.deg2rad(zen))**2) - (Re+GdAlt)*np.cos(np.pi-np.deg2rad(zen))
-                zen_inj = np.pi-np.arccos((a**2+(Re+injh)**2-Re**2)/(2*a*(Re+injh)))
-                Xmax_primary,zen_inj2 = modules._getXmax('proton', 10**float(eny)/1e18, np.deg2rad(zen) # approximation based on values from plots for gamma (=e) and protons (=pi) # g/cm2
-                Xmax_height, Xmax_distance = modules._dist_decay_Xmax(zen_inj, injh, Xmax_primary) # d_prime: distance from decay point to Xmax
+    shower_infos = []
+    Nwish = 20
+    for ievt in range(0,Nwish):
+        for azim in AZIMUTH:
+            for zen in ZENITH:
+                for eny in pwr_EE:
+                    task = 'EE1E'+eny+'-az'+str(int(azim))+'-zen'+str(int(zen))+'_evt'+str(ievt)
 
-                ### Reduce the radio array to the shower geometrical footprint (we account for a footprint twice larger than the Cherenkov angle)
-                CORE = random_array_pos(slope,sep) #
-                ANTENNAS3 = reduce_antenna_array(Xmax_height,zen,azim,ANTENNAS2,CORE,DISPLAY)
-                totito  = generate_input(task, 10**float(eny), azim, zen, ANTENNAS3)
+                    # Compute informations on Xmax
+                    Xmax_primary,zen_inj = modules._getXmax('proton', 10**float(eny)/1e18, np.deg2rad(zen)) # approximation based on values from plots for gamma (=e) and protons (=pi) # g/cm2
+                    Xmax_height, Xmax_distance = modules._dist_decay_Xmax(zen_inj, injh, Xmax_primary) # d_prime: distance from decay point to Xmax
 
-                #Write file
-                fileZha = output_folder+'inp/EE1E+'+eny+'-az'+str(int(azim))+'-zen'+str(int(zen))+'.inp'
-                dir=os.path.dirname(fileZha)
-                if not os.path.exists(dir):
-                    os.makedirs(dir)
-                inpfile = open(fileZha,"w+")
-                inpfile.write(totito)
-                inpfile.close()
+                    # Sample the shower core position.
+                    b = np.mean(ANTENNAS[:,0:], axis=0)
 
+                    pos_tab= []
+                    Nevents = 0
+                    while True:
+                        Nevents += 1
+                        ANTENNAS2 = np.copy(ANTENNAS)
+                        x = random.uniform(b[0] - dx, b[0] + dx)
+                        y = random.uniform(b[1] - dy, b[1] + dy)
+                        ANTENNAS2 = ANTENNAS2-[x,y,0]
+                        pos_tab.append([x,y])
+                        if Nevents %1e5==0:
+                            random.seed()
+                            print Nevents
+                        ANTENNAS3 = reduce_antenna_array(Xmax_height,zen,azim,ANTENNAS2,DISPLAY)
+                        if len(ANTENNAS3) >= MIN_ANTENNAS:
+                            break
+                    pos_tab = np.array(pos_tab)
+                    totito  = generate_input(task, 10**float(eny), azim, zen, ANTENNAS3)
+
+                    #Write file
+                    fileZha = output_folder+'inp/'+task+'.inp'
+                    dir=os.path.dirname(fileZha)
+                    if not os.path.exists(dir):
+                        os.makedirs(dir)
+                        os.makedirs(dir+'/fig/')
+                    inpfile = open(fileZha,"w+")
+                    inpfile.write(totito)
+                    inpfile.close()
+
+                    plot_drawn_pos(ANTENNAS2,ANTENNAS3,pos_tab,output_folder,task,DISPLAY)
+                    print 'Nevents =',Nevents
+                    shower_infos.append([ievt,10**float(eny)/1e18,azim,zen,Nevents,len(ANTENNAS3),x,y,dx,dy,sep,nx,ny,slope,hz,GdAlt,MIN_ANTENNAS])
+    shower_info_file = output_folder+'/inp/summary_table.txt'
+    shower_infos = np.array(shower_infos)
+    hdr='\n'.join(["NumEvt Energy[EeV] Azimuth_GRAND[deg] Zenith_GRAND[deg] Ntry NAntennas x[m] y[m] dx[m] dy[m] step[m] Nx Ny Slope[deg] MountainHeight[m] GroundAltitudeAboveSeaLevel[m] MinAntennas", "xmin= "+str(np.amin(ANTENNAS[:,0]))+" xmax= "+str(np.amax(ANTENNAS[:,0]))+" ymin= "+str(np.amin(ANTENNAS[:,1]))+" ymax= "+str(np.amax(ANTENNAS[:,1]))])
+    np.savetxt(shower_info_file,shower_infos,fmt='%d %0.2f   %0.1f   %0.1f   %d   %d   %0.2f   %0.2f   %0.2f   %0.2f   %0.1f   %d   %d   %0.1f   %0.1f   %0.1f   %d' ,header=hdr)
 
 ##########################################################################################################
 ##########################################################################################################
 ###                                  Let's define useful functions                                     ###
 ##########################################################################################################
+##########################################################################################################
+def plot_drawn_pos(ANTENNAS_i,ANTENNAS_sel,pos_tab,output_folder,task,DISPLAY):
+    #ANTENNAS_i are the antenna positions corrected by the position of the intersection between the shower axis and the ground
+    #ANTENNAS_sel are the selected antenna positions
+    #CORE is the random position
+    fig, ax = pl.subplots()
+    pl.scatter(ANTENNAS_i[:,0]+pos_tab[-1,0],ANTENNAS_i[:,1]+pos_tab[-1,1],c='b',edgecolors='none') #arrays are move back around (0,0,GdAlt)
+    pl.scatter(ANTENNAS_sel[:,0]+pos_tab[-1,0],ANTENNAS_sel[:,1]+pos_tab[-1,1],c='g',edgecolors='none') #arrays are move back around (0,0,GdAlt)
+    pl.scatter(pos_tab[:,0],pos_tab[:,1],c='k',edgecolors='none')
+    pl.scatter(pos_tab[-1,0],pos_tab[-1,1],c='r',edgecolors='none')
+    figname = output_folder+'/inp/fig/plots_'+task+'.png'
+    pl.savefig(figname,dpi=350)
+    if DISPLAY:
+        pl.show()
+    pl.close()
+
+    fig, ax = pl.subplots()
+    pl.scatter(ANTENNAS_i[:,0],ANTENNAS_i[:,1],c='b',edgecolors='none') #arrays are move back around (0,0,GdAlt)
+    pl.scatter(ANTENNAS_sel[:,0],ANTENNAS_sel[:,1],c='g',edgecolors='none') #arrays are move back around (0,0,GdAlt)
+    pl.scatter(0.,0.,c='r',edgecolors='none')
+    figname = output_folder+'/inp/fig/plots_'+task+'_real.png'
+    pl.savefig(figname,dpi=350)
+    if DISPLAY:
+        pl.show()
+    pl.close()
+    return
+
 ##########################################################################################################
 def random_array_pos(slope=0.,sep=1e3):
     """ Compute a random offset for 2 or 3 of the space dimensions depending of the slope """
@@ -149,30 +223,23 @@ def getCerenkovAngle(h=100e3):
     return alphac
 
 ##########################################################################################################
-def reduce_antenna_array(h=None,theta=None,phi=None,ANTENNAS=None,core=[0.,0.,0.],DISPLAY=False):
+def reduce_antenna_array(h=None,theta=None,phi=None,ANTENNAS=None,DISPLAY=False):
     """ Reduce the size of the initialized radio array to the shower geometrical footprint by computing the angle between shower and decay-point-to-antenna axes """
     """ theta = zenith in GRAND convention [in deg], h = Xmax height [in m] """
 
-    zen,azim = GRANDtoZHAireS(theta,phi)
-    zenr = np.radians(zen)
-    azimr = np.radians(azim)
+    zenr = np.radians(theta)
+    azimr = np.radians(phi)
     ANTENNAS1 = np.copy(ANTENNAS)
 
-    # Shift antenna array with the randomized core position
-    ANTENNAS1[:,0] = ANTENNAS1[:,0]+core[0]
-    ANTENNAS1[:,1] = ANTENNAS1[:,1]+core[1]
-    ANTENNAS1[:,2] = ANTENNAS1[:,2]+core[2]
-
     # Compute angle between shower and decay-point-to-antenna axes
-    #u_ant = ANTENNAS1-h*np.array([-np.tan(zenr),0.,1.],dtype=float)
-    #u_sh = [np.sin(zenr),0.,-np.cos(zenr)]
-    u_ant = ANTENNAS1-np.array([-(h-GdAlt)*np.tan(zenr)*np.cos(azimr),-(h-GdAlt)*np.tan(zenr)*np.sin(azimr),h],dtype=float)
+    Xmax_pos = np.array([(h-GdAlt)*np.tan(zenr)*np.cos(azimr),(h-GdAlt)*np.tan(zenr)*np.sin(azimr),h],dtype=float)
+    u_ant = ANTENNAS1-Xmax_pos
     u_ant = (u_ant.T/np.linalg.norm(u_ant,axis=1)).T
-    u_sh = np.array([np.cos(azimr)*np.sin(zenr), np.sin(azimr)*np.sin(zenr), -np.cos(zenr)])
+    u_sh = np.array([np.cos(azimr)*np.sin(zenr), np.sin(azimr)*np.sin(zenr), np.cos(zenr)])
     ant_angle = np.arccos(np.matmul(u_ant, u_sh))
 
     # Remove antennas of the initial array that are located outside the "footprint"
-    omegar = getCerenkovAngle(h)*5. #[in rad] # Accounting for a footprint four times larger than the Cherenkov angle
+    omegar = getCerenkovAngle(h)*4. #[in rad] # Accounting for a footprint four times larger than the Cherenkov angle
     angle_test = ant_angle<=omegar
     sel = np.where(angle_test)[0]
     ANTENNAS2 = ANTENNAS1[sel,:]
@@ -187,12 +254,12 @@ def reduce_antenna_array(h=None,theta=None,phi=None,ANTENNAS=None,core=[0.,0.,0.
         sel= np.delete(sel,antisel,0)
 
     # 3D Display of the radio array
-    if DISPLAY:
+    if DISPLAY and len(sel)>MIN_ANTENNAS:
         ant_map_i = np.zeros(np.shape(ANTENNAS1)[0])
         ant_map_i[sel]=1.
         cc = np.zeros((np.size(ant_map_i),3))
         cc[np.where(ant_map_i==0),:]=[1,1,1]
-        array_display(ANTENNAS,ant_angle,'Shower axis to decay point-antenna axis angle map')
+        #array_display(ANTENNAS,ant_angle,'Shower axis to decay point-antenna axis angle map')
         array_display(ANTENNAS1,cc,'Selected antenna map')
 
     return ANTENNAS2
@@ -251,8 +318,8 @@ def generate_input(task, energy, azimuth, zenith, antennas):
         "TaskName {:s}".format(task),
         "PrimaryParticle proton",
         "PrimaryEnergy {:.2E} eV".format(energy),
-        "PrimaryZenAngle {:.2f} deg".format(zenith),
-        "PrimaryAzimAngle {:.2f} deg Magnetic".format(azimuth),
+        "PrimaryZenAngle {:.2f} deg".format(zen),
+        "PrimaryAzimAngle {:.2f} deg Magnetic".format(azim),
         "ForceModelName SIBYLL",
         #"SetGlobal RASPASSHeight {:.2f} m".format(injh),
         "RandomSeed {:.5f}".format(seed),
@@ -262,6 +329,7 @@ def generate_input(task, energy, azimuth, zenith, antennas):
         "SetGlobal RASPASSDistance 0.00"
     ]
     for a in antennas:
+        a[2] = a[2]-GdAlt
         stream.append("AddAntenna {:1.2f} {:1.2f} {:1.2f}".format(a[0],a[1],a[2]))
 
     stream += [
