@@ -272,11 +272,14 @@ def compute_CR(az,zen,Etarget,Nevt,ROOT,suffix):
                     data_config = np.array(data_config,dtype=str)
                     #np.savetxt(shower_file,data_config,fmt='%s     %s     %s     %s     %s     %s     %s     %s     %s     %s     %s    %s   %s   %s   %s   %s ', header="Energy [eV]    Azimuth_GRAND [deg]   Zenith_GRAND [deg]   EventNumber   New_conservative   Nns_conservative   Nup_conservative   Ntot_conservative   New_aggressive   Nns_aggressive   Nup_aggressive   Ntot_aggressive   max(Vp2p_ew)   max(Vp2p_ns)   max(Vp2p_up)   max(Vp2p_tot) ")
     data_config_tot = np.array(data_config_tot,dtype=str)
-    np.savetxt(shower_file_tot,data_config_tot,fmt='%s     %s     %s     %s     %s     %s     %s     %s     %s     %s     %s    %s   %s   %s   %s   %s ', header="Energy [eV]    Azimuth_GRAND [deg]   Zenith_GRAND [deg]   EventNumber   New_conservative   Nns_conservative   Ntot_conservative   New_aggressive   Nns_aggressive   Ntot_aggressive   max(Vp2p_ew)   max(Vp2p_ns)   max(Vp2p_tot) ")
+    np.savetxt(shower_file_tot,data_config_tot,fmt='%s     %s     %s     %s     %s     %s     %s     %s     %s     %s     %s    %s   %s   %s   %s   %s ', header="Energy [eV]    Azimuth_GRAND [deg]   Zenith_GRAND [deg]   EventNumber   New_conservative   Nns_conservative   Nup_conservative   Ntot_conservative   New_aggressive   Nns_aggressive   Nup_aggressive   Ntot_aggressive   max(Vp2p_ew)   max(Vp2p_ns)   max(Vp2p_up)   max(Vp2p_tot) ")
     return
 
 ##########################################################################################################
 def compute_GP300(Etarget,Nevt,ROOT,suffix,DISPLAY):
+    det_dir = ROOT+'detection/'
+    if not os.path.exists(det_dir):
+        os.makedirs(det_dir)
     shower_file_tot=ROOT+'detection/detection_count'+suffix+'.txt'
     data_config_tot=[]
     for ie in range(len(Etarget)):
@@ -333,7 +336,7 @@ def compute_GP300(Etarget,Nevt,ROOT,suffix,DISPLAY):
             data_config = np.array(data_config,dtype=str)
             #np.savetxt(shower_file,data_config,fmt='%s     %s     %s     %s     %s     %s     %s     %s     %s     %s     %s    %s   %s   %s   %s   %s ', header="Energy [eV]    Azimuth_GRAND [deg]   Zenith_GRAND [deg]   EventNumber   New_conservative   Nns_conservative   Nup_conservative   Ntot_conservative   New_aggressive   Nns_aggressive   Nup_aggressive   Ntot_aggressive   max(Vp2p_ew)   max(Vp2p_ns)   max(Vp2p_up)   max(Vp2p_tot) ")
     data_config_tot = np.array(data_config_tot,dtype=str)
-    np.savetxt(shower_file_tot,data_config_tot,fmt='%s     %s     %s     %s     %s     %s     %s     %s     %s     %s     %s    %s   %s   %s ', header="Energy [eV]   EventNumber   New_conservative   Nns_conservative   Ntot_conservative   New_aggressive   Nns_aggressive   Ntot_aggressive   max(Vp2p_ew)   max(Vp2p_ns)   max(Vp2p_tot) ")
+    np.savetxt(shower_file_tot,data_config_tot,fmt='%s     %s     %s     %s     %s     %s     %s     %s     %s     %s     %s    %s   %s   %s ', header="Energy [eV]   EventNumber   New_conservative   Nns_conservative   Nup_conservative   Ntot_conservative   New_aggressive   Nns_aggressive   Nup_aggressive   Ntot_aggressive   max(Vp2p_ew)   max(Vp2p_ns)   max(Vp2p_up)   max(Vp2p_tot) ")
     return
 
 ##########################################################################################################
@@ -596,11 +599,12 @@ if __name__ == '__main__':
 
     elif analysis=='GP300':
         DISPLAY=0
-        ROOT = "/Users/nrenault/Desktop/GRAND/CRs_GP300/simus_set2/"
+        ROOT = "/Users/nrenault/Desktop/GRAND/CRs_GP300/simus_set3/"
         #ROOT = "/data75/renault/CRs_GP300/simus/voltage_computed/"
 
         Etarget = np.array(['17.0','17.5','18.0', '18.5','19.0', '19.5'],dtype=str)# , '19.0', '19.5'],dtype=str) #eV #1e19 #1e18 # 5e17
-        Nevt = range(1,101)
+        #Etarget = np.array(['16.5'],dtype=str)# , '19.0', '19.5'],dtype=str) #eV #1e19 #1e18 # 5e17
+        Nevt = range(1,301)
 
         '''
         try:
