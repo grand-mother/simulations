@@ -1,0 +1,1 @@
+['xmin = -9000.00 [m]', 'ymin = -12000.00 [m]', 'xmid = 500.00 [m]', 'ymid = 500.00 [m]', 'dx = 126.04 [m]', 'dy = 322.83 [m]', 'theta = 16.53 [deg]', 'average_slope = 11.28 [deg]', 'average_y = 1009.26 [m]']
