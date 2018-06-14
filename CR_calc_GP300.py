@@ -65,6 +65,12 @@ resfile = datadir+'detection_count_50-200MHz.txt'
 res4 = np.loadtxt(resfile)
 drawfile = '/Users/nrenault/Desktop/GRAND/CRs_GP300/inp_set4/summary_table.txt'
 draw4 = np.loadtxt(drawfile)
+#Set4
+datadir = '/Users/nrenault/Desktop/GRAND/CRs_GP300/simus_set5/detection/'
+resfile = datadir+'detection_count_50-200MHz.txt'
+res5 = np.loadtxt(resfile)
+drawfile = '/Users/nrenault/Desktop/GRAND/CRs_GP300/inp_set5/summary_table.txt'
+draw5 = np.loadtxt(drawfile)
 
 ###########################################################################
 #Correct the evtID to account for the multiple txt files
@@ -75,8 +81,13 @@ dimTry2 = int(np.amax(draw2[:,1]))
 draw3[np.where(draw3[:,1]!=0)[0],1] = draw3[np.where(draw3[:,1]!=0)[0],1]+dimTry2
 res3[:,1] = res3[:,1]+dimTry2
 #We do not do the same for the set4 because set4 covers a different energy range
-draw_tmp = np.concatenate((draw1,draw2,draw3,draw4))
-res_tmp = np.concatenate((res1,res2,res3,res4))
+draw_tmp = np.concatenate((draw1,draw2,draw3,draw4,draw5))
+res_tmp = np.concatenate((res1,res2,res3,res4,res5))
+
+###########################################################################
+#Rounding is wrongly done in the draw table, so has to be corrected by hand (for now)
+draw_tmp[np.where(draw_tmp[:,2]==0.06),2] = 10**(16.75-18)
+draw_tmp[np.where(draw_tmp[:,2]==0.32),2] = 10**(17.5-18)
 
 ###########################################################################
 #Sort the array with increasing energy while keeping the order of the events
@@ -126,7 +137,7 @@ Ntry = Ntry.reshape((dimE,dimTry)).T
 ID_selevt = np.array(num_selevt[ind_sel],dtype=int).reshape((dimE,dimTry)).T #ID selected for simus, From summary tab file
 phi = np.array(azim[ind_sel],dtype=float).reshape((dimE,dimTry)).T
 theta = np.array(180.-zen[ind_sel],dtype=float).reshape((dimE,dimTry)).T
-Elog = np.around(logEny[ind_sel],1).reshape((dimE,dimTry)).T
+Elog = np.around(logEny[ind_sel],2).reshape((dimE,dimTry)).T
 eny = np.sort(np.unique(Elog))
 ee = pow(10,np.unique(Elog))
 ind_le = np.where(ee<=eankle)
@@ -178,6 +189,10 @@ def run():
             ok_cons = np.logical_or(Nant_ew_cons[sel]>=nantmin,Nant_ns_cons[sel]>=nantmin)#,Nant_up_cons[0][sel]>=nantmin)
             Ragg = float(np.sum(ok_agg))/np.sum(Ntry[ievt,ie])
             Rcons = float(np.sum(ok_cons))/np.sum(Ntry[ievt,ie])
+            #if ie==0 or ie==1:
+                #print Elog[ievt,ie],evt_number_sim
+                #print Ragg
+                #print Nant_ew_agg[sel]
 
             ith = np.where(th==theta[ievt,ie])[0][0]
             ieny = np.where(eny==Elog[ievt,ie])[0][0]
@@ -207,33 +222,33 @@ def run():
     evt1d_cons_1e19 = 1e6*np.trapz(expo_cons[-2:]*J2*pow(ee[-2:],-gamma2),ee[-2:])
     evt1d_opt_1e19 = 1e6*np.trapz(expo_opt[-2:]*J2*pow(ee[-2:],-gamma2),ee[-2:])
 
-    evt1d_agg_1e1819 = 1e6*np.trapz(expo_agg[3:5]*J2*pow(ee[3:5],-gamma2),ee[3:5])
-    evt1d_cons_1e1819 = 1e6*np.trapz(expo_cons[3:5]*J2*pow(ee[3:5],-gamma2),ee[3:5])
-    evt1d_opt_1e1819 = 1e6*np.trapz(expo_opt[3:5]*J2*pow(ee[3:5],-gamma2),ee[3:5])
+    evt1d_agg_1e1819 = 1e6*np.trapz(expo_agg[4:6]*J2*pow(ee[4:6],-gamma2),ee[4:6])
+    evt1d_cons_1e1819 = 1e6*np.trapz(expo_cons[4:6]*J2*pow(ee[4:6],-gamma2),ee[4:6])
+    evt1d_opt_1e1819 = 1e6*np.trapz(expo_opt[4:6]*J2*pow(ee[4:6],-gamma2),ee[4:6])
 
     evt1d_agg_lastbd = 1e6*np.trapz(np.array([expo_agg[-1],expo_agg[-1]])*J2*pow(np.array([ee[-1],1e20]),-gamma2),np.array([ee[-1],1e20]))
     evt1d_cons_lastbd = 1e6*np.trapz(np.array([expo_cons[-1],expo_cons[-1]])*J2*pow(np.array([ee[-1],1e20]),-gamma2),np.array([ee[-1],1e20]))
     evt1d_opt_lastbd = 1e6*np.trapz(np.array([expo_opt[-1],expo_opt[-1]])*J2*pow(np.array([ee[-1],1e20]),-gamma2),np.array([ee[-1],1e20]))
 
-    evt1d_agg_1e16 = 1e6*np.trapz(np.array([expo_agg[0],expo_agg[0]])*J1*pow(np.array([10**16.25,10**16.75]),-gamma1),np.array([10**16.25,10**16.75]))
-    evt1d_cons_1e16 = 1e6*np.trapz(np.array([expo_cons[0],expo_cons[0]])*J1*pow(np.array([10**16.25,10**16.75]),-gamma1),np.array([10**16.25,10**16.75]))
-    evt1d_opt_1e16 = 1e6*np.trapz(np.array([expo_opt[0],expo_opt[0]])*J1*pow(np.array([10**16.25,10**16.75]),-gamma1),np.array([10**16.25,10**16.75]))
+    evt1d_agg_1e1675 = 1e6*np.trapz(np.array([expo_agg[1],expo_agg[1]])*J1*pow(np.array([10**16.5,10**17.0]),-gamma1),np.array([10**16.25,10**16.75]))
+    evt1d_cons_1e1675 = 1e6*np.trapz(np.array([expo_cons[1],expo_cons[1]])*J1*pow(np.array([10**16.5,10**17.0]),-gamma1),np.array([10**16.25,10**16.75]))
+    evt1d_opt_1e1675 = 1e6*np.trapz(np.array([expo_opt[1],expo_opt[1]])*J1*pow(np.array([10**16.5,10**17.0]),-gamma1),np.array([10**16.25,10**16.75]))
 
-    evt1d_agg_1e17 = 1e6*np.trapz(np.array([expo_agg[1],expo_agg[1]])*J1*pow(np.array([10**16.75,10**17.25]),-gamma1),np.array([10**16.75,10**17.25]))
-    evt1d_cons_1e17 = 1e6*np.trapz(np.array([expo_cons[1],expo_cons[1]])*J1*pow(np.array([10**16.75,10**17.25]),-gamma1),np.array([10**16.75,10**17.25]))
-    evt1d_opt_1e17 = 1e6*np.trapz(np.array([expo_opt[1],expo_opt[1]])*J1*pow(np.array([10**16.75,10**17.25]),-gamma1),np.array([10**16.75,10**17.25]))
+    evt1d_agg_1e17 = 1e6*np.trapz(np.array([expo_agg[2],expo_agg[2]])*J1*pow(np.array([10**16.75,10**17.25]),-gamma1),np.array([10**16.75,10**17.25]))
+    evt1d_cons_1e17 = 1e6*np.trapz(np.array([expo_cons[2],expo_cons[2]])*J1*pow(np.array([10**16.75,10**17.25]),-gamma1),np.array([10**16.75,10**17.25]))
+    evt1d_opt_1e17 = 1e6*np.trapz(np.array([expo_opt[2],expo_opt[2]])*J1*pow(np.array([10**16.75,10**17.25]),-gamma1),np.array([10**16.75,10**17.25]))
 
-    evt1d_agg_1e175 = 1e6*np.trapz(np.array([expo_agg[2],expo_agg[2]])*J1*pow(np.array([10**17.25,10**17.75]),-gamma1),np.array([10**17.25,10**17.75]))
-    evt1d_cons_1e175 = 1e6*np.trapz(np.array([expo_cons[2],expo_cons[2]])*J1*pow(np.array([10**17.25,10**17.75]),-gamma1),np.array([10**17.25,10**17.75]))
-    evt1d_opt_1e175 = 1e6*np.trapz(np.array([expo_opt[2],expo_opt[2]])*J1*pow(np.array([10**17.25,10**17.75]),-gamma1),np.array([10**17.25,10**17.75]))
+    evt1d_agg_1e175 = 1e6*np.trapz(np.array([expo_agg[3],expo_agg[3]])*J1*pow(np.array([10**17.25,10**17.75]),-gamma1),np.array([10**17.25,10**17.75]))
+    evt1d_cons_1e175 = 1e6*np.trapz(np.array([expo_cons[3],expo_cons[3]])*J1*pow(np.array([10**17.25,10**17.75]),-gamma1),np.array([10**17.25,10**17.75]))
+    evt1d_opt_1e175 = 1e6*np.trapz(np.array([expo_opt[3],expo_opt[3]])*J1*pow(np.array([10**17.25,10**17.75]),-gamma1),np.array([10**17.25,10**17.75]))
 
-    evt1d_agg_1e18 = 1e6*np.trapz(np.array([expo_agg[3],expo_agg[3]])*J1*pow(np.array([10**17.75,eankle[0]]),-gamma1),np.array([10**17.75,eankle[0]]))
-    evt1d_cons_1e18 = 1e6*np.trapz(np.array([expo_cons[3],expo_cons[3]])*J1*pow(np.array([10**17.75,eankle[0]]),-gamma1),np.array([10**17.75,eankle[0]]))
-    evt1d_opt_1e18 = 1e6*np.trapz(np.array([expo_opt[3],expo_opt[3]])*J1*pow(np.array([10**17.75,eankle[0]]),-gamma1),np.array([10**17.75,eankle[0]]))
+    evt1d_agg_1e18 = 1e6*np.trapz(np.array([expo_agg[4],expo_agg[4]])*J1*pow(np.array([10**17.75,eankle[0]]),-gamma1),np.array([10**17.75,eankle[0]]))
+    evt1d_cons_1e18 = 1e6*np.trapz(np.array([expo_cons[4],expo_cons[4]])*J1*pow(np.array([10**17.75,eankle[0]]),-gamma1),np.array([10**17.75,eankle[0]]))
+    evt1d_opt_1e18 = 1e6*np.trapz(np.array([expo_opt[4],expo_opt[4]])*J1*pow(np.array([10**17.75,eankle[0]]),-gamma1),np.array([10**17.75,eankle[0]]))
 
-    evt1d_agg_eankle = 1e6*np.trapz(np.array([expo_agg[4],expo_agg[4]])*J2*pow(np.array([eankle[0],10**18.75]),-gamma2),np.array([eankle[0],10**18.75]))+1e6*np.trapz(np.array([expo_agg[4],expo_agg[4]])*J2*pow(np.array([10**18.75,10**19.25]),-gamma2),np.array([10**18.75,10**19.25]))+1e6*np.trapz(np.array([expo_agg[5],expo_agg[5]])*J2*pow(np.array([10**19.25,10**19.75]),-gamma2),np.array([10**19.25,10**19.75]))
-    evt1d_cons_eankle = 1e6*np.trapz(np.array([expo_cons[4],expo_cons[4]])*J2*pow(np.array([eankle[0],10**18.75]),-gamma2),np.array([eankle[0],10**18.75]))+1e6*np.trapz(np.array([expo_cons[4],expo_cons[4]])*J2*pow(np.array([10**18.75,10**19.25]),-gamma2),np.array([10**18.75,10**19.25]))+1e6*np.trapz(np.array([expo_cons[5],expo_cons[5]])*J2*pow(np.array([10**19.25,10**19.75]),-gamma2),np.array([10**19.25,10**19.75]))
-    evt1d_opt_eankle = 1e6*np.trapz(np.array([expo_opt[4],expo_opt[4]])*J2*pow(np.array([eankle[0],10**18.75]),-gamma2),np.array([eankle[0],10**18.75]))+1e6*np.trapz(np.array([expo_opt[4],expo_opt[4]])*J2*pow(np.array([10**18.75,10**19.25]),-gamma2),np.array([10**18.75,10**19.25]))+1e6*np.trapz(np.array([expo_opt[5],expo_opt[5]])*J2*pow(np.array([10**19.25,10**19.75]),-gamma2),np.array([10**19.25,10**19.75]))
+    evt1d_agg_eankle = 1e6*np.trapz(np.array([expo_agg[5],expo_agg[5]])*J2*pow(np.array([eankle[0],10**18.75]),-gamma2),np.array([eankle[0],10**18.75]))+1e6*np.trapz(np.array([expo_agg[5],expo_agg[5]])*J2*pow(np.array([10**18.75,10**19.25]),-gamma2),np.array([10**18.75,10**19.25]))+1e6*np.trapz(np.array([expo_agg[6],expo_agg[6]])*J2*pow(np.array([10**19.25,10**19.75]),-gamma2),np.array([10**19.25,10**19.75]))
+    evt1d_cons_eankle = 1e6*np.trapz(np.array([expo_cons[5],expo_cons[5]])*J2*pow(np.array([eankle[0],10**18.75]),-gamma2),np.array([eankle[0],10**18.75]))+1e6*np.trapz(np.array([expo_cons[5],expo_cons[5]])*J2*pow(np.array([10**18.75,10**19.25]),-gamma2),np.array([10**18.75,10**19.25]))+1e6*np.trapz(np.array([expo_cons[6],expo_cons[6]])*J2*pow(np.array([10**19.25,10**19.75]),-gamma2),np.array([10**19.25,10**19.75]))
+    evt1d_opt_eankle = 1e6*np.trapz(np.array([expo_opt[5],expo_opt[5]])*J2*pow(np.array([eankle[0],10**18.75]),-gamma2),np.array([eankle[0],10**18.75]))+1e6*np.trapz(np.array([expo_opt[5],expo_opt[5]])*J2*pow(np.array([10**18.75,10**19.25]),-gamma2),np.array([10**18.75,10**19.25]))+1e6*np.trapz(np.array([expo_opt[6],expo_opt[6]])*J2*pow(np.array([10**19.25,10**19.75]),-gamma2),np.array([10**19.25,10**19.75]))
 
     ndays_ref = 365.*1.  # duration of observation (days)
     dt_ref = 3600.*24.*ndays_ref #in s
@@ -265,8 +280,8 @@ def run():
     print 'Expected yearly event rate for E>=10^19.5eV (agressive):',evt1d_agg_lastbd
     print 'Expected yearly event rate for E>=10^19.5eV (conservative):',evt1d_cons_lastbd
     print ' '
-    print 'Expected yearly event rate around 10^16 eV (agressive):',evt1d_agg_1e16 *rescale_dt
-    print 'Expected yearly event rate around 10^16 eV (conservative):',evt1d_cons_1e16 *rescale_dt
+    print 'Expected yearly event rate around 10^16.75 eV (agressive):',evt1d_agg_1e1675 *rescale_dt
+    print 'Expected yearly event rate around 10^16.75 eV (conservative):',evt1d_cons_1e1675 *rescale_dt
     print ' '
     print 'Expected yearly event rate around 10^17 eV (agressive):',evt1d_agg_1e17 *rescale_dt
     print 'Expected yearly event rate around 10^17 eV (conservative):',evt1d_cons_1e17 *rescale_dt
@@ -338,7 +353,7 @@ def run():
     pl.semilogy(thc,np.cos(thc*pi/180)*Adraw,'-',lw=3,label='Optimal')
     #pl.semilogy(thc,Aeff_theta_phi_opt[3,:],'x-',lw=3,label='Optimal')
     for ie in range(dimE):
-        pl.semilogy(thc,Aeff_theta_phi_cons[ie,:],'x-',lw=3,mew=3, ms=10,label=str(np.round(10**Elog[0,ie]/1e18,1))+' EeV') #,label='Conservative - '+str(np.round(10**Elog[0,ie]/1e18,1))+' EeV')
+        pl.semilogy(thc,Aeff_theta_phi_cons[ie,:],'x-',lw=3,mew=3, ms=10,label=str(np.round(10**Elog[0,ie]/1e18,2))+' EeV') #,label='Conservative - '+str(np.round(10**Elog[0,ie]/1e18,1))+' EeV')
     pl.xlabel('Theta (deg)')
     pl.ylabel('$<A_{eff}>_\phi$ (km$^2$)')
     pl.grid(True)
@@ -383,7 +398,7 @@ def distrib_events(ind_sel,logeny,azim,zen,xc,yc,altc,Nant_footprint,Ntry):
     # Histo energy
     fig1 = pl.figure(figsize=(21.0,9.7))
     pl.subplot(131)
-    pl.hist([logeny,logeny[ind_sel]],bins=[16.25,16.75,17.25,17.75,18.25,18.75,19.25,19.75],density=1,label=['Generated','Simulated'],align='mid')
+    pl.hist([logeny,logeny[ind_sel]],bins=[16.375,16.625,16.875,17.25,17.75,18.25,18.75,19.25,19.75],density=1,label=['Generated','Simulated'],align='mid')
     pl.xlabel('Energy')
     pl.ylabel('Rate')
     pl.legend()
@@ -434,7 +449,8 @@ def distrib_events(ind_sel,logeny,azim,zen,xc,yc,altc,Nant_footprint,Ntry):
 
     #'''
     fig6 = pl.figure(figsize=(21.0,9.7))
-    pl.hist(np.log10(Ntry),bins=25,density=0,label=[str('{0:.2e}'.format(10**eny[ie]))+' eV' for ie in range(len(eny))])
+    log10Ntry = np.log10(Ntry)
+    pl.hist(log10Ntry,bins=25,density=0,label=[str('{0:.2e}'.format(10**eny[ie]))+' eV' for ie in range(len(eny))])
     pl.xlabel('log10 Number of tries')
     pl.ylabel('Rate')
     pl.legend()
