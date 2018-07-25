@@ -8,12 +8,12 @@ Created on Mon Nov  6 11:46:58 2017
 
 import numpy as np
 import matplotlib.pyplot as plt
-
+import StringIO
 
 filename = 'GRAND_antenna.list'
 f_nu = open(filename, 'r') 
 table_nu = f_nu.read()
-c_nu = StringIO(unicode(table_nu))
+c_nu = StringIO.StringIO(unicode(table_nu))
 info_nu = np.loadtxt(c_nu)
 
 tab_X = info_nu[:,0]

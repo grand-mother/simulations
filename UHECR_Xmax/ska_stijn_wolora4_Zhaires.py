@@ -3,7 +3,7 @@
 ### Now adapted to perform Xmax reco for GRAND.
 
 import numpy as np
-from optparse import OptionParser
+#from optparse import OptionParser
 from Tkinter import *
 import matplotlib
 matplotlib.use('Agg')
@@ -12,15 +12,21 @@ from matplotlib import cm
 import cPickle
 import scipy.interpolate as intp
 import scipy.optimize as opt
-from scipy.special import gamma
+#from scipy.special import gamma
 import random
-import os
+#import os
 
+import NoisePower
 
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes, zoomed_inset_axes
-from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
+#from scipy.optimize import leastsq
+from scipy.optimize import least_squares
 
-from scipy.optimize import curve_fit
+#from scipy.optimize import minimize
+
+#from mpl_toolkits.axes_grid1.inset_locator import inset_axes, zoomed_inset_axes
+#from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
+
+#from scipy.optimize import curve_fit
 
 # Parabola model, b=sx, c=sy
 def model(x, a, b, c):# model(x, a=1.0, b=700., c=1.65e9)
@@ -76,15 +82,18 @@ def reverseAnalysis(simfile, eventno, simevent, eventno2,  flagging=True, plots=
 
    zenith=siminfo['zenith']
    azimuth=siminfo['azimuth']
-   energy=siminfo['energy']
+#   energy=siminfo['energy']
    hillas=siminfo['hillas'] # parallel version
    sim_antenna_position=siminfo['antenna_position'] # just x and y??
-   sim_power=siminfo['power']
-   filt_power=siminfo['filteredpower']
+   sim_power=siminfo['filteredpower']
    primary=siminfo['primary']
+   lowco=siminfo['lowco'][0]
+   hico=siminfo['hico'][0]
+#   peak_to_peak=siminfo['peak_to_peak']
+#   Pnoise=1.*siminfo['Pnoise'][0]
+
    del siminfo
 
-  
    # Simulated star shape has to be centralised (to be included-done). Actual array can than be shifted by any number
    # Here you define core position of simulation in meters wrt to array core NOTE correct that
    core_x=0 #np.mean(sim_antenna_position[0][:,0]) #50
@@ -97,10 +106,10 @@ def reverseAnalysis(simfile, eventno, simevent, eventno2,  flagging=True, plots=
    corr_y=np.mean(sim_antenna_position[0][:,1]) #100  # - = to the right0 #0#
    corr_z=np.mean(sim_antenna_position[0][:,2]) #
    print "corrected by ", corr_x, corr_y, corr_z
-
-   sim_power=filt_power
   
    sim_tot_power=np.sum(sim_power,axis=2)
+   #sim_tot_power=np.sum(peak_to_peak,axis=2)
+   
    nsim=sim_tot_power.shape[0] # rows = number of Simulations
    nsimant=sim_tot_power.shape[1] #columns = number of Antennas
    
@@ -118,20 +127,26 @@ def reverseAnalysis(simfile, eventno, simevent, eventno2,  flagging=True, plots=
    # Interpolations based on RBF functions:
    
    rbf= np.ndarray([nsim],dtype=object)
-   rbf_0= np.ndarray([nsim],dtype=object)
-   rbf_1= np.ndarray([nsim],dtype=object)
+#   rbf_0= np.ndarray([nsim],dtype=object)
+#   rbf_1= np.ndarray([nsim],dtype=object)
+
+   def func_call(self,r):
+       return np.log((r/self.epsilon)**2+1)
+#           return 1./(r/self.epsilon+1.)*np.exp(-(np.log(r/self.epsilon+1.))**2)
 
    for i in np.arange(int(nsim)):
       pos_sim_UVW[i,:,:] = GetUVW(sim_antenna_position[i][:,:],0,0,0, zenith[0], azimuth[0]) #transform to shower plane
       
       selection=np.array(np.isfinite(sim_power[i][:,0]))*np.array(np.isfinite(sim_power[i][:,1]))
       
-      rbf[i] = intp.Rbf(pos_sim_UVW[i,selection,0], pos_sim_UVW[i,selection,1], sim_tot_power[i,selection],smooth =0,function='quintic')
+      rbf[i] = intp.Rbf(pos_sim_UVW[i,selection,0], pos_sim_UVW[i,selection,1], sim_tot_power[i,selection],smooth=0,function=func_call)
 
    # 2D radio fit function
    def radio_fitfunc(f,dpos,n,cx,cy,az,zen):
        pos_ant_UVW = GetUVW(dpos, cx, cy,0, zen, az)
        interp_power = rbf[n](pos_ant_UVW[:,0],pos_ant_UVW[:,1])
+       bool1=interp_power>=0
+       interp_power *= bool1
        return f*interp_power
 
    # radio fit p=[pratio,xoff,yoff]
@@ -160,8 +175,7 @@ def reverseAnalysis(simfile, eventno, simevent, eventno2,  flagging=True, plots=
    lines=skafile.readlines()
 
 
-   nant=len(lines)
-   #   print "number of GRAND antennas:", nant
+   nant=len(lines) # number of GRAND antennas
    ska_x=np.zeros([nant])
    ska_y=np.zeros([nant])
    ska_z=np.zeros([nant])
@@ -182,7 +196,7 @@ def reverseAnalysis(simfile, eventno, simevent, eventno2,  flagging=True, plots=
 
    ant_sel=np.ones([nant],dtype=bool)
 
-   ant_sel=(np.sqrt(np.square(ska_x-core_x)+np.square(ska_y-core_y)+np.square(ska_z-core_z))<5600)*(np.arange(0,nant)%1==0)
+   ant_sel=(np.sqrt(np.square(ska_x-core_x)+np.square(ska_y-core_y)+np.square(ska_z-core_z))<4000)*(np.arange(0,nant)%1==0)
    #print np.sqrt(np.square(ska_x-core_x)+np.square(ska_y-core_y)+np.square(ska_z-core_z)), (np.arange(0,nant)%2==0)
 
    nsel_ant = np.sum(ant_sel)
@@ -201,6 +215,8 @@ def reverseAnalysis(simfile, eventno, simevent, eventno2,  flagging=True, plots=
    dtotpower=np.zeros([len(pos_ant_UVW[:,0])])
    for i in np.arange(len(pos_ant_UVW[:,0])):
       dtotpower[i]=rbf[simevent](pos_ant_UVW[i,0],pos_ant_UVW[i,1]) # give a power value to all GRAND antenna position based on all simulation
+      if dtotpower[i]<0:
+           dtotpower[i]=0
 
    
    ### NOISE section: has to be deleted for a more realistic one, ATTENTION units not correct
@@ -210,7 +226,16 @@ def reverseAnalysis(simfile, eventno, simevent, eventno2,  flagging=True, plots=
    print "galactic noise 0.01"
 
    # always a specific fraction of the power as noise for the every single antenna + 1% of the power of the antenna with the highest signal for galactic noise
-   dsigmatot=dtotpower*noisefraction+0.01*np.max(dtotpower) #change this to a more realistic!!! 
+   #dsigmatot=np.full((len(pos_ant_UVW[:,0])),1.0**2)
+
+#   dsigmatot=dtotpower*noisefraction+0.01*np.max(dtotpower) #change this to a more realistic!!!
+
+#   print "Pnoise", Pnoise
+
+   nsample = 512. # number of bins for intergration along time traces
+   Pnoise = NoisePower.Calc_Noise(zenith[0],azimuth[0],lowco,hico)
+   dsigmatot=np.sqrt(4.*Pnoise*dtotpower + 2.*nsample*Pnoise**2) # New noise model, for voltage traces
+
    dpower=np.ones([nant,2])
    dpower[:,0]=dtotpower/2
    dpower[:,1]=dtotpower/2
@@ -219,9 +244,20 @@ def reverseAnalysis(simfile, eventno, simevent, eventno2,  flagging=True, plots=
    dsigma[:,1]=dsigmatot/2
    simpower=np.zeros([nant,nsim])
 
-  #Note: NOISE can be COMMENT OUT!!!!!   
+
+   # Threshold value for antenna triggering (power, rough estimate)
+#   thresh = 150.**2
+
+
+
+
+   # Note: NOISE can be COMMENT OUT!!!!!
    for i in np.arange(nant):
       dtotpower[i]=dtotpower[i]+random.gauss(0,dsigmatot[i]) # Add the noise to the power
+#      dtotpower[i]=dtotpower[i]+dsigmatot[i] # With new noise model, for voltage traces
+
+#      if dtotpower[i]<thresh:
+#            dtotpower[i]=0
    print "mean noise, max noise, max power (muV/m)^2", np.mean(dsigmatot[ant_sel]),np.max(dsigmatot), np.max(dtotpower)
    
 
@@ -239,11 +275,11 @@ def reverseAnalysis(simfile, eventno, simevent, eventno2,  flagging=True, plots=
 
    combchi2=np.zeros([nsim])
    radiochi2=np.zeros([nsim])
-   radiochi2_d=np.zeros([nsim])
+#   radiochi2_d=np.zeros([nsim])
    lorachi2=np.zeros([nsim])
    p_ratio=np.zeros([nsim])
-   p_ratio0=np.zeros([nsim])
-   p_ratio1=np.zeros([nsim])
+#   p_ratio0=np.zeros([nsim])
+#   p_ratio1=np.zeros([nsim])
    d_ratio=np.zeros([nsim])
    xoffset=np.zeros([nsim])
    yoffset=np.zeros([nsim])
@@ -266,6 +302,8 @@ def reverseAnalysis(simfile, eventno, simevent, eventno2,  flagging=True, plots=
       return chi2_comb, chi2_rad, chi2_part, fitparam[0], fitparam[1], fitparam[2], fitparam[3]
       del chi2_comb,chi2_rad , chi2_part, paramset, itchi2
    
+#   print "dtotpower",dtotpower
+   print "len dtotpower",len(dtotpower)
 
    niterations=1
    for i in np.arange(nsim):
@@ -273,11 +311,12 @@ def reverseAnalysis(simfile, eventno, simevent, eventno2,  flagging=True, plots=
       combchi2[i], radiochi2[i], lorachi2[i], p_ratio[i], d_ratio[i], xoffset[i], yoffset[i]= FitRoutine(fit_args,niterations, simmode)
 
    nsel_ant = np.sum(ant_sel)
-   ndf_lora=nstations-4
+   print "Antennas flagged: ", nsel_ant, " out of ", nant
+
    ndf_comb = nsel_ant+nstations-5
    ndf_radio = nsel_ant-4
-   ndf_radio_d = 2*nsel_ant-4
-   
+
+
    if (simmode): 
       combchi2[simevent]=1000*ndf_comb #NOTE: penalty for actual event used to make fake data
       radiochi2[simevent]=1000*ndf_radio
@@ -286,30 +325,28 @@ def reverseAnalysis(simfile, eventno, simevent, eventno2,  flagging=True, plots=
    yoff=yoffset[bestsim]
    
    #ADDITIONAL FLAGGING
-   fitparam=np.array([p_ratio[bestsim],d_ratio[bestsim],xoffset[bestsim],yoffset[bestsim]])
+#   fitparam=np.array([p_ratio[bestsim],d_ratio[bestsim],xoffset[bestsim],yoffset[bestsim]])
    fit_args=(dtotpower,dsigmatot,dpower,dsigma,positions,lora_dens,lora_err,lora_positions,core_x,core_y,data_azimuth,data_zenith,bestsim)
-   rad_rel_err= np.square(radio_errfunc([p_ratio[bestsim],xoffset[bestsim],yoffset[bestsim]],*fit_args))
+#   rad_rel_err= np.square(radio_errfunc([p_ratio[bestsim],xoffset[bestsim],yoffset[bestsim]],*fit_args))
   
-   nsel_ant = np.sum(ant_sel)
-   print "Antennas flagged: ", np.sum(ant_sel), " out of ", nant
-   
+
    # Second round of fitting after flagging of antennas:
    for i in np.arange(nsim):
       fit_args=(dtotpower[ant_sel],dsigmatot[ant_sel],dpower[ant_sel],dsigma[ant_sel],positions[ant_sel],lora_dens,lora_err,lora_positions,core_x,core_y,data_azimuth,data_zenith,i)
       combchi2[i], radiochi2[i], lorachi2[i], p_ratio[i], d_ratio[i], xoffset[i], yoffset[i]= FitRoutine(fit_args,niterations, simmode)
       simpower[:,i]=radio_fitfunc(p_ratio[i],positions,i,core_x+xoffset[i],core_y+yoffset[i],azimuth[0],zenith[0])
 
-   p_ratio0=p_ratio
-   p_ratio1=p_ratio
+#   p_ratio0=p_ratio
+#   p_ratio1=p_ratio
    
    pos_ant_UVW = GetUVW(positions, core_x+xoff, core_y+yoff,core_z, data_zenith, data_azimuth)
    axdist_ant = np.sqrt(pos_ant_UVW[:,0]*pos_ant_UVW[:,0]+pos_ant_UVW[:,1]*pos_ant_UVW[:,1])
-   orig_pos_lora_UVW = GetUVW(lora_positions, core_x, core_y, core_z, data_zenith, data_azimuth)
-   orig_axdist_lora = np.sqrt(orig_pos_lora_UVW[:,0]*orig_pos_lora_UVW[:,0]+orig_pos_lora_UVW[:,1]*orig_pos_lora_UVW[:,1])
-   pos_lora_UVW = GetUVW(lora_positions, core_x+xoff, core_y+yoff, core_z, data_zenith, data_azimuth)
-   axdist_lora = np.sqrt(pos_lora_UVW[:,0]*pos_lora_UVW[:,0]+pos_lora_UVW[:,1]*pos_lora_UVW[:,1])
+#   orig_pos_lora_UVW = GetUVW(lora_positions, core_x, core_y, core_z, data_zenith, data_azimuth)
+#   orig_axdist_lora = np.sqrt(orig_pos_lora_UVW[:,0]*orig_pos_lora_UVW[:,0]+orig_pos_lora_UVW[:,1]*orig_pos_lora_UVW[:,1])
+#   pos_lora_UVW = GetUVW(lora_positions, core_x+xoff, core_y+yoff, core_z, data_zenith, data_azimuth)
+#   axdist_lora = np.sqrt(pos_lora_UVW[:,0]*pos_lora_UVW[:,0]+pos_lora_UVW[:,1]*pos_lora_UVW[:,1])
 
-   no150 = np.argmin(np.abs(axdist_ant - 150))
+#   no150 = np.argmin(np.abs(axdist_ant - 150))
 
    # Select points for Xmax fit
 
@@ -317,10 +354,10 @@ def reverseAnalysis(simfile, eventno, simevent, eventno2,  flagging=True, plots=
    drange=hillas[bestsim]-200 # parallel 100
    chirange=combchi2[bestsim]+200 # +0.5*ndf_comb 30
    
-   print "urange = %.2f" %urange
-   print "drange = %.2f" %drange
-   print "chirange/ndf = %.2f" %(chirange/(ndf_comb+1e-25))
-   
+#   print "urange = %.2f" %urange
+#   print "drange = %.2f" %drange
+#   print "chirange/ndf = %.2f" %(chirange/(ndf_comb+1e-25))
+
    ### NOTE: How does this work??? -> At the moment just fix the fit to a certain value for Chi2
    
    print "Starting fit procedure"
@@ -344,39 +381,39 @@ def reverseAnalysis(simfile, eventno, simevent, eventno2,  flagging=True, plots=
 
    ### PLOTTING
 
-#   fig=plt.figure(1,figsize=(8,8)) ### Figure with interpolated footprint in vxB and simulated star shape with signal
+   fig=plt.figure(1,figsize=(8,8)) ### Figure with interpolated footprint in vxB and simulated star shape with signal
 #   ax=plt.plot()
-#   dist_scale = np.max(abs(pos_sim_UVW[bestsim,:,0]))
-#   ti = np.linspace(-dist_scale, dist_scale, 150)
-#   XI, YI = np.meshgrid(ti, ti)
-#
-#   ZI = rbf[bestsim](XI, YI)*p_ratio[bestsim] # gives you a plotting grid for plotting the interpolated footprint
-#   maxp = np.max([np.max(dtotpower),np.max(ZI)]) # if =1, than there is no scaling of the signal distribution to the highest power1 #
-#   
-#   plt.imshow(ZI/maxp,vmax=1, vmin=-0.03, interpolation='bilinear', extent=(-dist_scale,dist_scale,-dist_scale,dist_scale), origin='lower left',cmap=cm.gnuplot2_r) # interpolation
-#   im_vxB=plt.scatter(pos_sim_UVW[bestsim,:,0],pos_sim_UVW[bestsim,:,1],15,sim_tot_power[bestsim,:]*p_ratio[bestsim]/maxp, vmax=1, vmin=-0.03,cmap=cm.gnuplot2_r, lw = 0.1 ) # starshape pattern
-#   
-#   fig.colorbar(im_vxB) # im, ax=ax
-#   plt.xlabel(r"Position along ${\bf v} \times \,{\bf B}$ axis (m)", fontsize=16)
-#   plt.ylabel(r"Position along ${\bf v} \times \, ({\bf v} \times \,{\bf B})$ axis (m)", fontsize=16)
-#   name=outputfolder+"GRAND_eventview_{0}_{1}.png".format(eventno, simevent)
-#   plt.savefig(name)
-#   plt.close()
-#   
-#
-#   fig=plt.figure(2) # figure with LDF
-#   maxp = np.max([np.max(dtotpower),np.max(simpower[:,bestsim])]) #1 #
-#   dataplt=plt.errorbar(axdist_ant[ant_sel],dtotpower[ant_sel]/maxp,dsigmatot[ant_sel]/maxp,linestyle='',marker='o',color='r')
-#   simplt=plt.plot(axdist_ant[ant_sel],simpower[ant_sel,bestsim]/maxp,linestyle='',marker='s',color='b')
-#   plt.ylabel("Total power (a.u.)", fontsize=16)
-#   plt.xlabel("Distance (m)", fontsize=16)
-#   plt.ylim((0,max(simpower[ant_sel,bestsim]/maxp)+0.2))
-#   plt.xlim(0,4000)
-#   plt.legend([dataplt[0],simplt[0]],["GRAND data","Zhaires simulation"], numpoints=1)
-#   name=outputfolder+"GRAND_ldf_{0}_{1}.png".format(eventno, simevent)
-#   plt.savefig(name)
-#   plt.close()
-#
+   dist_scale = np.max(abs(pos_sim_UVW[bestsim,:,0]))
+   ti = np.linspace(-dist_scale, dist_scale, 150)
+   XI, YI = np.meshgrid(ti, ti)
+
+   ZI = rbf[bestsim](XI, YI)*p_ratio[bestsim] # gives you a plotting grid for plotting the interpolated footprint
+   maxp = np.max([np.max(dtotpower),np.max(ZI)]) # if =1, than there is no scaling of the signal distribution to the highest power1 #
+   
+   plt.imshow(ZI/maxp,vmax=1, vmin=-0.03, interpolation='bilinear', extent=(-dist_scale,dist_scale,-dist_scale,dist_scale), origin='lower left',cmap=cm.gnuplot2_r) # interpolation
+   im_vxB=plt.scatter(pos_sim_UVW[bestsim,:,0],pos_sim_UVW[bestsim,:,1],15,sim_tot_power[bestsim,:]*p_ratio[bestsim]/maxp, vmax=1, vmin=-0.03,cmap=cm.gnuplot2_r, lw = 0.1 ) # starshape pattern
+   
+   fig.colorbar(im_vxB) # im, ax=ax
+   plt.xlabel(r"Position along ${\bf v} \times \,{\bf B}$ axis (m)", fontsize=16)
+   plt.ylabel(r"Position along ${\bf v} \times \, ({\bf v} \times \,{\bf B})$ axis (m)", fontsize=16)
+   name=outputfolder+"GRAND_eventview_{0}_{1}.png".format(eventno, simevent)
+   plt.savefig(name)
+   plt.close()
+   
+
+   fig=plt.figure(2) # figure with LDF
+   maxp = np.max([np.max(dtotpower),np.max(simpower[:,bestsim])]) #1 #
+   dataplt=plt.errorbar(axdist_ant[ant_sel],dtotpower[ant_sel]/maxp,dsigmatot[ant_sel]/maxp,linestyle='',marker='o',color='r')
+   simplt=plt.plot(axdist_ant[ant_sel],simpower[ant_sel,bestsim]/maxp,linestyle='',marker='s',color='b')
+   plt.ylabel("Total power (a.u.)", fontsize=16)
+   plt.xlabel("Distance (m)", fontsize=16)
+   plt.ylim((0,max(simpower[ant_sel,bestsim]/maxp)+0.2))
+   plt.xlim(0,4000)
+   plt.legend([dataplt[0],simplt[0]],["Fake data","ZHAireS simulations"], numpoints=1, frameon=False)
+   name=outputfolder+"GRAND_ldf_{0}_{1}.png".format(eventno, simevent)
+   plt.savefig(name)
+   plt.close()
+
 
    ### CHI 2 PLOTTING
 
@@ -423,13 +460,13 @@ def reverseAnalysis(simfile, eventno, simevent, eventno2,  flagging=True, plots=
    for i in np.arange(nsim):
       h.append(hillas[i])
       c.append(combchi2[i])
+
    hfit=[]
    cfit=[]
    for i in np.arange(nsim):
     if(combchi2[i]/(ndf_comb+1e-25)< 5.): ## NOTE: Change this to a more reasonable number like 4
 	  hfit.append(hillas[i])
 	  cfit.append(combchi2[i])
-
 
 
    hfit=[]
@@ -440,15 +477,15 @@ def reverseAnalysis(simfile, eventno, simevent, eventno2,  flagging=True, plots=
         cfit.append(combchi2[i])
 
 
-
-   model_flag = 0
+#   print "fit_selection", fit_selection
+#   model_flag = 0
 
    ##########################
    ### TEST: fit the edge ###
    ##########################
 
    t_new = np.linspace(min(hillas[:]), max(hillas[:]), 50)
-
+#   t_new = np.linspace(min(hfit[:]), max(hfit[:]), 50) # Check the difference!
    def get_flipped(y_data, y_model):
       flipped = y_model - y_data
       flipped[flipped > 0] = 0
@@ -463,63 +500,62 @@ def reverseAnalysis(simfile, eventno, simevent, eventno2,  flagging=True, plots=
       resid = np.square(y + flipped - y_model)
       return np.nan_to_num(resid)
 
-   from scipy.optimize import leastsq
-   from scipy.optimize import least_squares
-
    guesses = [2.0e-4, 800., 10.0]
-
-#fit_pars, flag = leastsq(func = flipped_resid, x0 = guesses, args = (hillas, combchi2/(ndf_comb+1e-25)), bounds=(0., np.inf))
+   
    res1 = least_squares(flipped_resid, guesses, args = (hillas, combchi2/(ndf_comb+1e-25)), jac='2-point', bounds=(0., np.inf), method='trf')
+
+#   res1 = least_squares(flipped_resid, guesses, args = (hfit, cfit/(ndf_comb+1e-25)), jac='2-point', bounds=(0., np.inf), method='trf')
+
    fit_pars = res1.x
    y_fit = model(t_new, *fit_pars)
-   y_guess = model(t_new, *guesses)
-
+#   y_guess = model(t_new, *guesses)
+   Xreco = fit_pars[1]
+   
    print 'New: Curvature, Xmax_min, Chi2_min ', fit_pars
 
 
+   #####################################
+   ### TEST: other fitting procedure ###
+   #####################################
 
-   from scipy.optimize import minimize
 
-   def func_new(pars, x, y):
-        lambda0 = 5000.
-        y_model = np.zeros(len(hillas))
-        for i in range(len(hillas)):
-            y_model[i] = model(x[i], *pars)
-        return np.square(np.sum((y-y_model)**2)) - np.sum(lambda0*(y-y_model))
+#   def func_new(pars, x, y):
+#        lambda0 = 5000.
+#        y_model = np.zeros(len(hillas))
+#        for i in range(len(hillas)):
+#            y_model[i] = model(x[i], *pars)
+#        return np.square(np.sum((y-y_model)**2)) - np.sum(lambda0*(y-y_model))
+#
+#   x0 = [2.0e-4, 800., 3.5]
+#
+#   res_new = minimize( func_new, x0, args = (hillas, combchi2/(ndf_comb+1e-25)) )
+#
+#   fit_pars_new = res_new.x
+#   y2_fit = model(t_new, *fit_pars_new)
+#
+#   print 'New 2: Curvature, Xmax_min, Chi2_min ', res_new.x
 
-   x0 = [2.0e-4, 800., 3.5]
-
-#   cons=({'type': 'ineq', 'fun': lambda x: x[0]},
-#      {'type': 'ineq', 'fun': lambda x: x[1]},
-#      {'type': 'ineq', 'fun': lambda x: x[2]})
-
-#res_new = minimize(func_new, x0, method='SLSQP', tol=1e-6, constraints=cons)
-#   res_new = minimize(func_new, x0, args = (hillas, combchi2/(ndf_comb+1e-25)), method='SLSQP', jac=None, bounds=None, constraints=cons, tol=None, callback=None)
-#res_new = minimize( func_new, x0, args = (hillas, combchi2/(ndf_comb+1e-25)), bounds=((0.,np.inf),(0,np.inf),(0,np.inf)) )
-   res_new = minimize( func_new, x0, args = (hillas, combchi2/(ndf_comb+1e-25)) )
-
-   print 'New 2: Curvature, Xmax_min, Chi2_min ', res_new.x
-   fit_pars_new = res_new.x
-   y2_fit = model(t_new, *fit_pars_new)
 
 
 
    ### Python exceptions
 
-   try: # my fit # Ex Xmax bounds: min(hillas)-50, max(hillas)+50
-      popt, pcov = curve_fit(model, hfit, cfit/(ndf_comb+1e-25), maxfev=20000) # without bounds
+#   try: # my fit # Ex Xmax bounds: min(hillas)-50, max(hillas)+50
+#      popt, pcov = curve_fit(model, hfit, cfit/(ndf_comb+1e-25), maxfev=20000) # without bounds
       #popt, pcov = curve_fit(model, hfit, cfit/(ndf_comb+1e-25), maxfev=20000, method='trf', bounds=([0.,0.,0.],[np.inf,np.inf,np.inf])) # with bounds
    
-      print 'Old: Curvature, Xmax_min, Chi2_min ', popt
+#      print 'Old: Curvature, Xmax_min, Chi2_min ', popt
 
-      t = np.linspace(min(hfit[:]), max(hfit[:]), 50)
-      Xreco=popt[1]
-      model_flag = 1
+#      t = np.linspace(min(hfit[:]), max(hfit[:]), 50)
+#      Xreco=popt[1]
+#      model_flag = 1
 
-   except (RuntimeError, TypeError, NameError, UnboundLocalError) as exc: #except
-       print(exc)
-       Xreco=hillas[bestsim]
-                     
+#   except (RuntimeError, TypeError, NameError, UnboundLocalError) as exc: #except
+#       print(exc)
+#       Xreco=hillas[bestsim]
+
+#   print "h_p",h_p
+#   print "c_p[:]/(ndf_comb+1e-25)",c_p[:]/(ndf_comb+1e-25)
 
    # Chi2 my fit
    fig=plt.figure(4,figsize=(8,8))  
@@ -532,17 +568,19 @@ def reverseAnalysis(simfile, eventno, simevent, eventno2,  flagging=True, plots=
    #plt.xlim(hillas[bestsim]-100,hillas[bestsim]+100)
    plt.xlim(500,900)
 
-   if model_flag==1:
-      plt.plot(t, model(t, *popt), label="Fitted Curve")
+#   if model_flag==1:
+#      plt.plot(t, model(t, *popt), label="Fitted Curve")
 
-   plt.plot(t_new, y_guess, linestyle='--', label="Guess")
-   plt.plot(t_new, y_fit, label="Fit")
+#   plt.plot(t_new, y_guess, linestyle='--', label="Guess")
+   plt.plot(t_new, y_fit)
 
-   plt.plot(t_new, y2_fit, label="Fit 2", color = 'g', linestyle = '-.')
+#   plt.plot(t_new, y2_fit, label="Fit 2", color = 'g', linestyle = '-.')
 
    plt.scatter(h_p,c_p[:]/(ndf_comb+1e-25),50,color='r')
    plt.scatter(h_Fe,c_Fe[:]/(ndf_comb+1e-25),50,color='b', marker='s')
 
+   plt.legend(["Fitted Curve","ZHAireS Simulations (proton)","ZHAireS Simulations (iron)"],
+              fontsize=14,frameon=False)
    name=outputfolder+"GRAND_xmaxcurve_{0}_ev{1}_realXmax{2}.png".format(eventno, simevent, realxmax)
    plt.savefig(name)  
    plt.close()
@@ -561,7 +599,7 @@ def reverseAnalysis(simfile, eventno, simevent, eventno2,  flagging=True, plots=
    
    ### GRAND eventview on ground
 
-   fig=plt.figure(7,figsize=(8,6)) # GRAND eventview on ground , figure with GRAND antenna positions and there power on ground
+   fig=plt.figure(7,figsize=(8,6)) # Figure with GRAND antenna positions and their power on ground
    plt.plot(core_x, core_y, '+', ms=6)#,markeredgewidth =10,markeredgecolor='red' )  'r+'
    #ax=plt.plot()
    dist_scale3 = 400 #1.2*np.max(axdist_ant)
@@ -569,12 +607,13 @@ def reverseAnalysis(simfile, eventno, simevent, eventno2,  flagging=True, plots=
    XI3, YI3 = np.meshgrid(ti3, ti3)
 
    ZI3 = rbf[bestsim](XI3, YI3)*p_ratio[bestsim] # for the interpolated footprint, but not needed here, at some point you need it to get the right color bar scale
-   maxp =np.max([np.max(dtotpower),np.max(ZI3)]) # Normierung rausgenommen#1.# 1 #
+   maxp = np.max([np.max(dtotpower),np.max(ZI3)]) # Normierung rausgenommen#1.# 1 #
+   #maxp = 1.
    cmap = matplotlib.cm.get_cmap("jet")
 
-   im2=plt.scatter(positions[:,0],positions[:,1],10,dtotpower/maxp, vmax=1, vmin=-0.03,cmap=cmap, lw = 0 )#cm.gnuplot2_r, lw = 0.1 )
+   im2=plt.scatter(positions[:,0],positions[:,1],10,dtotpower/maxp, vmax=1, vmin=-0.03,cmap=cmap, lw = 0 )
+#   im2=plt.scatter(positions[:,0], positions[:,1], 10, dtotpower, cmap=cmap, lw = 0 )
 
-   
    dist_scale=np.max([abs(positions[:,0]), abs(positions[:,1])])
    plt.xlim((-dist_scale,dist_scale))
    plt.ylim((-dist_scale,dist_scale))
@@ -588,7 +627,7 @@ def reverseAnalysis(simfile, eventno, simevent, eventno2,  flagging=True, plots=
    plt.close()
 
 
-   # starshape on ground on ground for comparison
+   # starshape on ground for comparison
    fig=plt.figure(5,figsize=(8,8))
    ti = np.linspace(-dist_scale, dist_scale, 150)
    XI, YI = np.meshgrid(ti, ti)
@@ -617,8 +656,9 @@ def reverseAnalysis(simfile, eventno, simevent, eventno2,  flagging=True, plots=
        print "\n"
                
    xmaxreco=0
-   fitconverged=0
+#   fitconverged=0
 #return Xreco, realxmax, hillas[bestsim], xmaxreco,c, h, (ndf_comb+1e-25), primary[simevent]
-   return [fit_pars[1],Xreco,fit_pars_new[1]], realxmax, hillas[bestsim], xmaxreco,c, h, (ndf_comb+1e-25), primary[simevent]
+#   return [fit_pars[1],Xreco,fit_pars_new[1]], realxmax, hillas[bestsim], xmaxreco,c, h, (ndf_comb+1e-25), primary[simevent]
+   return fit_pars[1], realxmax, hillas[bestsim], xmaxreco,c, h, (ndf_comb+1e-25), primary[simevent]
 
 

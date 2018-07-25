@@ -5,7 +5,7 @@
 
 #==============================================================================
 
-SCRIPTDIR=/Users/guepin/Documents/GRAND/Xmax_new2/ # Folder where your scripts are saved
+SCRIPTDIR=/Users/guepin/Documents/GRAND/UHECR_Xmax/ # Folder where your scripts are saved
 
 
 # GEANTDIR=/home/zilles/Geant4-SKA/LORA
@@ -13,13 +13,39 @@ SCRIPTDIR=/Users/guepin/Documents/GRAND/Xmax_new2/ # Folder where your scripts a
 # How to proceed with numbering the simulations is not consistent so far. If there is one number missing the script just skips it.
 # For running the analysis script you have nevertheless to hand over a list file with the simuations you like to use
 
-NR=CR190_77deg_flat
-CODE=${NR}_0 #370350 #number of your first simulation
-CODE2=${NR}_0 #370350 #the same number again
+#NR=CR170_83deg
+#filename=SimlistTest170_83.txt
+
+#NR=CR175_83deg
+#filename=SimlistTest175_83.txt
 
 
-FILES=10 #in generell 50 protons + 20 iron
-filename=SimlistTest190_flat.txt
+#NR=CR180_83deg
+#filename=SimlistTest180_83.txt
+
+#NR=CR185_83deg
+#filename=SimlistTest185_83.txt
+
+NR=CR190
+#filename=SimlistTest190_83.txt
+filename=SimlistTest190.txt
+
+#NR=CR190_77deg
+#filename=SimlistTest190_77_40_10.txt
+
+#NR=CR190_72deg
+#filename=SimlistTest190_72_40_10.txt
+
+
+#NR=CR190_77deg_flat
+#filename=SimlistTest190_77_40_0.txt
+
+CODE=${NR}_0 #number of your first simulation
+CODE2=${NR}_0 #the same number again
+
+
+FILES=9 #in general 50 protons + 20 iron
+
 
 ################ STARTING THE ANALYSIS ################
 
@@ -56,4 +82,4 @@ done
   python ProcessData_wolora4_Zhaires.py ${DATADIR} ${CODE2} ${OTFD}/DAT${CODE2}-pickle.dat ${FILES} 50 200 ${OTFD} ${MAPDIR} ${filename}
 
 ### particle file not included
-### lower freq:50 - high freq.:350  in MHz
+### lower freq:50 - high freq.:200  in MHz
