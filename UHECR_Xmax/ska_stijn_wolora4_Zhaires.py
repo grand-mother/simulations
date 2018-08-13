@@ -3,7 +3,6 @@
 ### Now adapted to perform Xmax reco for GRAND.
 
 import numpy as np
-#from optparse import OptionParser
 from Tkinter import *
 import matplotlib
 matplotlib.use('Agg')
@@ -12,21 +11,12 @@ from matplotlib import cm
 import cPickle
 import scipy.interpolate as intp
 import scipy.optimize as opt
-#from scipy.special import gamma
 import random
-#import os
-
 import NoisePower
-
-#from scipy.optimize import leastsq
 from scipy.optimize import least_squares
 
-#from scipy.optimize import minimize
+import Remove_outliers
 
-#from mpl_toolkits.axes_grid1.inset_locator import inset_axes, zoomed_inset_axes
-#from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar
-
-#from scipy.optimize import curve_fit
 
 # Parabola model, b=sx, c=sy
 def model(x, a, b, c):# model(x, a=1.0, b=700., c=1.65e9)
@@ -196,8 +186,8 @@ def reverseAnalysis(simfile, eventno, simevent, eventno2,  flagging=True, plots=
 
    ant_sel=np.ones([nant],dtype=bool)
 
-   ant_sel=(np.sqrt(np.square(ska_x-core_x)+np.square(ska_y-core_y)+np.square(ska_z-core_z))<4000)*(np.arange(0,nant)%1==0)
-   #print np.sqrt(np.square(ska_x-core_x)+np.square(ska_y-core_y)+np.square(ska_z-core_z)), (np.arange(0,nant)%2==0)
+   ant_sel=(np.sqrt(np.square(ska_x-core_x)+np.square(ska_y-core_y)+np.square(ska_z-core_z))<40000)*(np.arange(0,nant)%1==0)
+#   print np.sqrt(np.square(ska_x-core_x)+np.square(ska_y-core_y)+np.square(ska_z-core_z)), (np.arange(0,nant)%2==0)
 
    nsel_ant = np.sum(ant_sel)
    #print "selected: ", nsel_ant # number of antennas used in the analysis
@@ -233,7 +223,7 @@ def reverseAnalysis(simfile, eventno, simevent, eventno2,  flagging=True, plots=
 #   print "Pnoise", Pnoise
 
    nsample = 512. # number of bins for intergration along time traces
-   Pnoise = NoisePower.Calc_Noise(zenith[0],azimuth[0],lowco,hico)
+   Pnoise = NoisePower.Calc_Noise(zenith[0],azimuth[0],lowco,hico)*0.1
    dsigmatot=np.sqrt(4.*Pnoise*dtotpower + 2.*nsample*Pnoise**2) # New noise model, for voltage traces
 
    dpower=np.ones([nant,2])
@@ -254,10 +244,10 @@ def reverseAnalysis(simfile, eventno, simevent, eventno2,  flagging=True, plots=
    # Note: NOISE can be COMMENT OUT!!!!!
    for i in np.arange(nant):
       dtotpower[i]=dtotpower[i]+random.gauss(0,dsigmatot[i]) # Add the noise to the power
-#      dtotpower[i]=dtotpower[i]+dsigmatot[i] # With new noise model, for voltage traces
 
 #      if dtotpower[i]<thresh:
 #            dtotpower[i]=0
+
    print "mean noise, max noise, max power (muV/m)^2", np.mean(dsigmatot[ant_sel]),np.max(dsigmatot), np.max(dtotpower)
    
 
@@ -537,36 +527,98 @@ def reverseAnalysis(simfile, eventno, simevent, eventno2,  flagging=True, plots=
 
 
 
+   from scipy import stats
 
-   ### Python exceptions
+   m1, m2 = np.array(h), np.array(c/(ndf_comb+1e-25))
+   xmin = m1.min()-10.
+   xmax = m1.max()+10.
+   ymin = m2.min()
+   ymax = m2.max()
 
-#   try: # my fit # Ex Xmax bounds: min(hillas)-50, max(hillas)+50
+   Xcol, Ycol = np.mgrid[xmin:xmax:10j, ymin:ymax:10j]
+   positions_col = np.vstack([Xcol.ravel(), Ycol.ravel()])  
+          
+   values = np.vstack([m1, m2])
+   kernel = stats.gaussian_kde(values)
+      
+
+#   hfit_new, cfit_new = Remove_outliers.simplify_by_avg(np.array([h, c/(ndf_comb+1e-25)]),10.)
+#   hfit_new, cfit_new = Remove_outliers.reject_outliers(np.array([hfit, cfit/(ndf_comb+1e-25)]),10.)
+
+#   hfit_new = m1[kernel(values)>np.max(kernel(values)/2.)]
+#   cfit_new = m2[kernel(values)>np.max(kernel(values)/2.)]
+
+#   hfit_new = h
+#   cfit_new = c/(ndf_comb+1e-25)
+
+#   hfit_new = np.array([])
+#   cfit_new = np.array([])
+#   for i in range(len(m1)):
+#       ni = int((m1[i]-xmin)/((xmax-xmin)/20.))
+#       if (ni<1 or ni>len(Xcol)-2):
+#           hfit_new=np.append(hfit_new, m1[i])
+#           cfit_new=np.append(cfit_new, m2[i])
+#       else:
+#           maxi = np.max(np.reshape(kernel(positions_col).T, Xcol.shape)[ni,:])
+#           minChi2 = np.min( m2[ (m1>=Xcol[ni,0]) & (m1<Xcol[ni+1,0]) ] )
+#           stdChi2 = np.std( m2[ (m1>=Xcol[ni,0]) & (m1<Xcol[ni+1,0]) ] )
+##           if (kernel(np.array([m1[i],m2[i]]))>0.5*maxi or m2[i] <= 1.*minChi2):
+#           if (m2[i] <= minChi2+stdChi2):
+#               hfit_new=np.append(hfit_new, m1[i])
+#               cfit_new=np.append(cfit_new, m2[i])
+
+
+
+   hfit_new = np.array([])
+   cfit_new = np.array([])
+   for i in range(len(m1)):
+       ni = int((m1[i]-xmin)/(Xcol[1,0]-Xcol[0,0]))
+       minChi2 = np.min( m2[ (m1>=Xcol[ni,0]) & (m1<Xcol[ni+1,0]) ] )
+       stdChi2 = np.std( m2[ (m1>=Xcol[ni,0]) & (m1<Xcol[ni+1,0]) ] )
+       if (m2[i] <= minChi2+stdChi2):
+           hfit_new=np.append(hfit_new, m1[i])
+           cfit_new=np.append(cfit_new, m2[i])
+
+
+
+   try: # my fit # Ex Xmax bounds: min(hillas)-50, max(hillas)+50
 #      popt, pcov = curve_fit(model, hfit, cfit/(ndf_comb+1e-25), maxfev=20000) # without bounds
-      #popt, pcov = curve_fit(model, hfit, cfit/(ndf_comb+1e-25), maxfev=20000, method='trf', bounds=([0.,0.,0.],[np.inf,np.inf,np.inf])) # with bounds
+#      popt, pcov = curve_fit(model, hfit, cfit/(ndf_comb+1e-25), maxfev=20000, method='trf', bounds=([0.,0.,0.],[np.inf,np.inf,np.inf])) # with bounds
+#      popt, pcov = opt.curve_fit(model, hfit, cfit/(ndf_comb+1e-25), bounds=([0.,0.,0.],[np.inf,np.inf,np.inf])) # with bounds
+      popt, pcov = opt.curve_fit(model, hfit_new, cfit_new, bounds=([0.,0.,0.],[np.inf,np.inf,np.inf])) # with bounds
    
-#      print 'Old: Curvature, Xmax_min, Chi2_min ', popt
+      print 'Old: Curvature, Xmax_min, Chi2_min ', popt
 
 #      t = np.linspace(min(hfit[:]), max(hfit[:]), 50)
-#      Xreco=popt[1]
+      Xreco = popt[1]
+      y_fit = model(t_new, *popt)
 #      model_flag = 1
 
-#   except (RuntimeError, TypeError, NameError, UnboundLocalError) as exc: #except
-#       print(exc)
-#       Xreco=hillas[bestsim]
+   except (RuntimeError, TypeError, NameError, UnboundLocalError) as exc: #except
+       print(exc)
+       Xreco=hillas[bestsim]
 
 #   print "h_p",h_p
 #   print "c_p[:]/(ndf_comb+1e-25)",c_p[:]/(ndf_comb+1e-25)
 
+
+
+
+#==============================================================================
+# Figures
+#==============================================================================
+
    # Chi2 my fit
    fig=plt.figure(4,figsize=(8,8))  
-
-   plt.ylim(0,20)
+   
+#   plt.ylim(0,20)
+   plt.ylim(0,2)
 
    plt.ylabel(r"$\chi^2$/ ndf", fontsize=16)
    plt.xlabel(r"$X_{\mathrm{max}}$ (g/cm$^2$)", fontsize=16)
  
    #plt.xlim(hillas[bestsim]-100,hillas[bestsim]+100)
-   plt.xlim(500,900)
+   plt.xlim(500,1100)
 
 #   if model_flag==1:
 #      plt.plot(t, model(t, *popt), label="Fitted Curve")
@@ -579,9 +631,40 @@ def reverseAnalysis(simfile, eventno, simevent, eventno2,  flagging=True, plots=
    plt.scatter(h_p,c_p[:]/(ndf_comb+1e-25),50,color='r')
    plt.scatter(h_Fe,c_Fe[:]/(ndf_comb+1e-25),50,color='b', marker='s')
 
+#   ax.imshow(np.rot90(Z))#, cmap=plt.cm.gist_earth_r, extent=[xmin, xmax, ymin, ymax])
+
+   plt.scatter(hfit_new, cfit_new,50, color='#2ca02c', marker='x')
+
    plt.legend(["Fitted Curve","ZHAireS Simulations (proton)","ZHAireS Simulations (iron)"],
               fontsize=14,frameon=False)
    name=outputfolder+"GRAND_xmaxcurve_{0}_ev{1}_realXmax{2}.png".format(eventno, simevent, realxmax)
+   plt.savefig(name)  
+   plt.close()
+
+      
+   fig=plt.figure()
+
+   xmin = 500
+   xmax = 1100
+   ymin = 0
+   ymax = 5
+
+   X, Y = np.mgrid[xmin:xmax:100j, ymin:ymax:100j]
+   positionsXY = np.vstack([X.ravel(), Y.ravel()])
+   Z = np.reshape(kernel(positionsXY).T, X.shape)
+
+   CS=plt.contourf(X,Y,Z, cmap=plt.cm.gist_earth_r)
+   
+   plt.scatter(h_p,c_p[:]/(ndf_comb+1e-25),50,color='r')
+   plt.scatter(h_Fe,c_Fe[:]/(ndf_comb+1e-25),50,color='b', marker='s')
+
+   plt.scatter(m1, m2, 10, color='#ff7f0e')
+
+   plt.colorbar(CS,format='%.2e')
+
+   plt.xlim(xmin,xmax)
+   plt.ylim(ymin,ymax)
+   name=outputfolder+"GRAND_xmaxcdens_{0}_ev{1}_realXmax{2}.png".format(eventno, simevent, realxmax)
    plt.savefig(name)  
    plt.close()
    
@@ -659,6 +742,6 @@ def reverseAnalysis(simfile, eventno, simevent, eventno2,  flagging=True, plots=
 #   fitconverged=0
 #return Xreco, realxmax, hillas[bestsim], xmaxreco,c, h, (ndf_comb+1e-25), primary[simevent]
 #   return [fit_pars[1],Xreco,fit_pars_new[1]], realxmax, hillas[bestsim], xmaxreco,c, h, (ndf_comb+1e-25), primary[simevent]
-   return fit_pars[1], realxmax, hillas[bestsim], xmaxreco,c, h, (ndf_comb+1e-25), primary[simevent]
+   return Xreco, realxmax, hillas[bestsim], xmaxreco,c, h, (ndf_comb+1e-25), primary[simevent]
 
 

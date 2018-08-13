@@ -17,7 +17,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.optimize import curve_fit
 
-
 # Parabola model
 def model(x, a, b, c):
     return a*(x-b)**2 +c
@@ -61,8 +60,10 @@ print "filename: " + filename
 ## TimeBin 1.25ns
 
 # Script for filtering etc.
-ow.Process_Data(datadir, fileno, outputfile, files, lowco, hico, filename)
+#ow.Process_Data(datadir, fileno, outputfile, files, lowco, hico, filename)
 
+#file = open("ECR190_0_500m/Histtest_CR190_0.dat", "r")
+#r2 = np.loadtxt(file)
 
 for i in np.arange(int(files)-1):
     print "\nSimulated event: %i" %i
@@ -72,42 +73,75 @@ for i in np.arange(int(files)-1):
     r2[i]=np.array([results[0], results[1], results[2], np.abs(results[0]- results[1]), np.abs(results[0]- results[2]), results[3], results[7]])
 
 
-a2 = r2[:,3]
-a2.sort()
+#a2 = r2[:,3]
+#a2.sort()
+#
+#total=files
+#
+#proz2=0
+#position2=0
+#for m in np.arange(int(files)):  # sort them
+#    if(proz2 < 0.68*total): # get the 68% reconstruction uncertainty
+#      proz2+=1
+#    if(proz2 >= 0.68*total):
+#      position2 = a2[m]
+#      break
 
-total=files
+lim=100.
+Xreco_new = r2.T[0][ (r2.T[0]-r2.T[1] < lim)&(r2.T[0]-r2.T[1] > -lim)]
+Xreal_new = r2.T[1][(r2.T[0]-r2.T[1] < lim)&(r2.T[0]-r2.T[1] > -lim)]
 
-proz2=0
-position2=0
-for m in np.arange(int(files)):  # sort them
-    if(proz2 < 0.68*total): # get the 68% reconstruction uncertainty
-      proz2+=1
-    if(proz2 >= 0.68*total):
-      position2 = a2[m]
-      break
+#Xreco_new = r2.T[0]
+#Xreal_new = r2.T[1]
 
 m=np.mean(r2.T[3])
-std=np.std(r2.T[3])
-print("\n------FINAL RESULTS------") 
+std=np.sqrt(np.sum(1./len(r2.T[3])*r2.T[3]**2))
+std_bis=np.std(r2.T[3])
+std_ter=np.sqrt(np.sum(1./len(r2.T[3])*(r2.T[3]-m)**2))
+
+#mean_new=np.mean(r2.T[0]-r2.T[1])
+#std_new=np.std(r2.T[0]-r2.T[1])
+
+mean_new=np.mean(Xreco_new-Xreal_new)
+std_new=np.std(Xreco_new-Xreal_new)
+
+
+print("\n------FINAL RESULTS------")
+
+print("Mean: %e" %m)
+
 print("Std: %e" %std)
+print("Std_bis: %e" %std_bis)
+print("Std_ter: %e" %std_ter)
+
 print("3-sigma: %e" %(3.*std))
 print("5-sigma: %e" %(5.*std))
+
+print("\nMean_new: %e" %mean_new)
+print("Std_new: %e" %std_new)
 
  
 #### Plot the reconstruction uncertainty as a histogram: new fit
 fig=plt.figure(1,figsize=(8,6)) 
- 
-plt.hist(r2.T[3], bins=20, histtype='step')
-plt.axvline(position2,color='k', linestyle='--')
+
+bins=np.arange(-200,200,20)
+#bins=np.arange(-100,100,20)
+plt.hist(r2.T[0]-r2.T[1], bins=bins, histtype='step')
+plt.hist(Xreco_new-Xreal_new, bins=bins, histtype='step')
+
+#bins=np.arange(0,100,5)
+#plt.hist(r2.T[3], bins=bins, histtype='step')
+#plt.axvline(position2,color='k', linestyle='--')
 
 plt.ylabel("Nr. of Sim.")
-plt.xlabel("|Xreco-Xreal| (g/cm$^2$)")
+#plt.xlabel("|Xreco-Xreal| (g/cm$^2$)")
+plt.xlabel("Xreco-Xreal (g/cm$^2$)")
 
 plt.show()
-name = outputf+'Histtest2_{0}_unc{1}.pdf'.format(sys.argv[2], position2)
+name = outputf+'Histtest2_{0}_unc{1}.pdf'.format(sys.argv[2], std_new)
 plt.savefig(name)
 
-### Save all of it as a text file for later analysis
+# Save all of it as a text file for later analysis
 namefile = outputf+'Histtest_{0}.dat'.format(sys.argv[2])
 file= open(namefile, 'w')  
 #file.write('rec, real Xmax, best sim xmax, rec-real, rec-best, xmaxreco_stijn, primary\n')
