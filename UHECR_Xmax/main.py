@@ -1,25 +1,15 @@
+
+#==============================================================================
+# UHECR reconstruction for GRAND
+#==============================================================================
+
 import sys
-from sys import argv
-
 import numpy as np
-from optparse import OptionParser
-import cPickle
-import re
-from scipy.signal import hilbert
-from scipy.signal import resample
-import scipy.fftpack as fftp
-import os
-import ownprocess_wolora4_Zhaires as ow
-import process_func as prf
-import ska_stijn_wolora4_Zhaires as ska
-import matplotlib
 import matplotlib.pyplot as plt
-import numpy as np
-from scipy.optimize import curve_fit
 
-# Parabola model
-def model(x, a, b, c):
-    return a*(x-b)**2 +c
+import process_GRAND_Zhaires as process
+import analyze_GRAND_Zhaires as analyze
+
 
 script = sys.argv[0]  ### name of script
 datadir = sys.argv[1]  ### path to data read in
@@ -59,19 +49,26 @@ print "filename: " + filename
 ## BUT no antenna model (used to project x,y,z component to reality, needed e.g. for triggering, polarisation study)
 ## TimeBin 1.25ns
 
+#==============================================================================
 # Script for filtering etc.
-ow.Process_Data(datadir, fileno, outputfile, files, lowco, hico, filename)
+#==============================================================================
 
-#file = open("ECR190_0_500m/Histtest_CR190_0.dat", "r")
-#r2 = np.loadtxt(file)
+process.Process_Data(datadir, fileno, outputfile, files, lowco, hico, filename)
+
+#==============================================================================
+# Script for analysis
+#==============================================================================
 
 for i in np.arange(int(files)-1):
     print "\nSimulated event: %i" %i
-    results = ska.reverseAnalysis(outputfile, eventno=fileno, eventno2=str(txt[i]), simevent=i, outputfolder=outputf, SKAmap=Map)
+    results = analyze.reverseAnalysis(outputfile, eventno=fileno, eventno2=str(txt[i]), simevent=i, outputfolder=outputf, SKAmap=Map)
     print "Final result: reconstr, real Xmax "
     print results [0:2]    
     r2[i]=np.array([results[0], results[1], results[2], np.abs(results[0]- results[1]), np.abs(results[0]- results[2]), results[3], results[7]])
 
+
+#file = open("ECR190_0_500m/Histtest_CR190_0.dat", "r")
+#r2 = np.loadtxt(file)
 
 a2 = r2[:,3]
 a2.sort()
@@ -99,6 +96,7 @@ std_new=np.std(Xreco_new-Xreal_new)
 max_diff = np.max(r2.T[3])
 int_max_diff = int(max_diff/100+1)*100
 
+
 print("\n------FINAL RESULTS------")
 
 print("\nMean: %.3e" %mean_tot)
@@ -110,7 +108,11 @@ print("Typical 68%: %.3e" %position2)
 
 print("\nmax(Xreco-Xreal): %e \n" %max_diff)
 
-#### Plot the reconstruction uncertainty as a histogram: new fit
+
+#==============================================================================
+# Plot the reconstruction uncertainty as a histogram
+#==============================================================================
+
 fig=plt.figure(1,figsize=(8,6)) 
 
 bins=np.arange(-int_max_diff-10,int_max_diff+10,10)
@@ -130,7 +132,11 @@ plt.show()
 name = outputf+'Histtest2_{0}_unc{1}.pdf'.format(sys.argv[2], std_new)
 plt.savefig(name)
 
+
+#==============================================================================
 # Save all of it as a text file for later analysis
+#==============================================================================
+
 namefile = outputf+'Histtest_{0}.dat'.format(sys.argv[2])
 file= open(namefile, 'w')  
 #file.write('rec, real Xmax, best sim xmax, rec-real, rec-best, xmaxreco_stijn, primary\n')
